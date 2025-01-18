@@ -1,8 +1,16 @@
 import { Networking } from "@flamework/networking";
+import { ToolType, TWCharacterInstance } from "./types";
 
-interface ClientToServerEvents {}
+interface ClientToServerEvents {
+	UpdateCharacterTilt: Networking.Unreliable<(angle: number) => void>;
 
-interface ServerToClientEvents {}
+	EquipTool(toolType: ToolType): void;
+	UnequipCurrentTool(): void;
+}
+
+interface ServerToClientEvents {
+	CharacterTiltChanged: Networking.Unreliable<(character: TWCharacterInstance, angle: number) => void>;
+}
 
 interface ClientToServerFunctions {}
 

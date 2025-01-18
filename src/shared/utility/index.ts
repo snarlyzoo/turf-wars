@@ -1,0 +1,1 @@
+export { findFirstChildWithTag } from "./findFirstChildWithTag";
