@@ -1,20 +1,24 @@
 import { Component, Components } from "@flamework/components";
-import { OnStart, OnTick } from "@flamework/core";
+import { OnRender, OnStart, OnTick } from "@flamework/core";
 import { Players, RunService, Workspace } from "@rbxts/services";
-import { TiltCharacterComponent } from ".";
 import { HammerComponent, SlingshotComponent, ToolComponent } from "client/components/tools";
+import { Events } from "client/network";
 import { DisposableComponent } from "shared/components";
 import { TILT_SEND_RATE } from "shared/constants";
-import { ToolType, TWCharacterInstance } from "shared/types";
+import { TWCharacterInstance } from "shared/types/characterTypes";
+import { ToolType } from "shared/types/toolTypes";
 import { findFirstChildWithTag } from "shared/utility";
-import { Events } from "client/network";
+import { TiltCharacterComponent, ViewmodelComponent } from ".";
 
 const FIELD_OF_VIEW = 90;
 
 const player = Players.LocalPlayer;
 
 @Component()
-export class TWCharacterComponent extends DisposableComponent<{}, TWCharacterInstance> implements OnStart, OnTick {
+export class TWCharacterComponent
+	extends DisposableComponent<{}, TWCharacterInstance>
+	implements OnStart, OnTick, OnRender
+{
 	public get isAlive(): boolean {
 		return this._isAlive;
 	}
@@ -29,7 +33,7 @@ export class TWCharacterComponent extends DisposableComponent<{}, TWCharacterIns
 		this._combatEnabled = value;
 	}
 
-	private _isAlive: boolean = false;
+	private _isAlive: boolean = true;
 	private _combatEnabled: boolean = false;
 
 	private tiltAccumulator: number = 0;
@@ -54,12 +58,11 @@ export class TWCharacterComponent extends DisposableComponent<{}, TWCharacterIns
 
 		this.constructTiltCharacter();
 		this.constructTools();
+		this.constructViewmodel();
 
-		this.janitor.Add(this.instance.Humanoid.Died.Connect(() => this.onDied()));
+		this.instance.Humanoid.Died.Connect(() => this.onDied());
 
-		this.isAlive = true;
-
-		this.equipTool(ToolType.Slingshot);
+		task.defer(() => this.equipTool(ToolType.Slingshot));
 	}
 
 	public onTick(dt: number): void {
@@ -81,6 +84,19 @@ export class TWCharacterComponent extends DisposableComponent<{}, TWCharacterIns
 			}
 
 			this.tiltAccumulator -= TILT_SEND_RATE;
+		}
+	}
+
+	public onRender(): void {
+		if (!this.curTool) {
+			return;
+		}
+
+		for (const descendant of this.curTool.instance.GetDescendants()) {
+			if (descendant.IsA("BasePart")) {
+				descendant.CastShadow = false;
+				descendant.LocalTransparencyModifier = 0;
+			}
 		}
 	}
 
@@ -113,6 +129,10 @@ export class TWCharacterComponent extends DisposableComponent<{}, TWCharacterIns
 		this.curTool = newTool;
 		this.curTool.equip();
 
+		/**
+		 * Attach the tool to the character after the next animation frame.
+		 * This ensures the tool doesn't appear before the equip animation starts.
+		 */
 		task.spawn(() => {
 			RunService.PreAnimation.Wait();
 			if (this.curTool) {
@@ -127,20 +147,19 @@ export class TWCharacterComponent extends DisposableComponent<{}, TWCharacterIns
 	}
 
 	public unequip(): boolean {
-		const curTool = this.curTool;
-		if (!curTool) {
+		if (!this.curTool) {
 			return true;
 		}
 
-		if (curTool.isActive) {
+		if (this.curTool.isActive) {
 			return false;
 		}
 
-		this.curTool = undefined;
-		curTool.unequip();
+		this.curTool.unequip();
 
+		this.curTool.instance.Parent = this.backpack;
 		this.instance.Torso.ToolJoint.Part1 = undefined;
-		curTool.instance.Parent = this.backpack;
+		this.curTool = undefined;
 
 		return true;
 	}
@@ -197,5 +216,16 @@ export class TWCharacterComponent extends DisposableComponent<{}, TWCharacterIns
 		});
 
 		print("Tool components constructed.");
+	}
+
+	private constructViewmodel(): void {
+		print("Constructing viewmodel component...");
+
+		this.components.addComponent<ViewmodelComponent>(this.instance);
+		this.janitor.Add(() => {
+			this.components.removeComponent<ViewmodelComponent>(this.instance);
+		});
+
+		print("Viewmodel component constructed.");
 	}
 }

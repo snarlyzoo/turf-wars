@@ -1,14 +1,14 @@
-import { Component } from "@flamework/components";
-import { Flamework, OnStart } from "@flamework/core";
-import { DisposableComponent } from "shared/components";
-import { R6CharacterInstance, ToolInstance, ToolType } from "shared/types";
+import { BaseComponent, Component } from "@flamework/components";
+import { OnStart } from "@flamework/core";
+import { Players } from "@rbxts/services";
+import { Events } from "server/network";
+import { TWCharacterInstance } from "shared/types/characterTypes";
+import { ToolInstance, ToolType } from "shared/types/toolTypes";
+import { isR6Character, isToolInstance } from "shared/types/typeGuards";
 import { findFirstChildWithTag } from "shared/utility";
 
-const isR6Character = Flamework.createGuard<R6CharacterInstance>();
-const isToolInstance = Flamework.createGuard<ToolInstance>();
-
 @Component()
-export class TWPlayerComponent extends DisposableComponent<{}, Player> implements OnStart {
+export class TWPlayerComponent extends BaseComponent<{}, Player> implements OnStart {
 	public get isAlive(): boolean {
 		return this._isAlive;
 	}
@@ -18,15 +18,77 @@ export class TWPlayerComponent extends DisposableComponent<{}, Player> implement
 
 	private _isAlive: boolean = false;
 
-	private character?: R6CharacterInstance;
+	private character?: TWCharacterInstance;
 	private backpack?: Backpack;
 
 	private tools: Partial<Record<ToolType, ToolInstance>> = {};
+	private curTool?: ToolInstance;
 
 	public onStart(): void {
-		this.janitor.Add(this.instance.CharacterAdded.Connect((character) => this.onCharacterAdded(character)));
-		this.janitor.Add(this.instance.CharacterRemoving.Connect(() => this.onCharacterRemoving()));
-		this.janitor.Add(this.instance.CharacterAppearanceLoaded.Connect(() => this.onCharacterAppearanceLoaded()));
+		this.instance.CharacterAdded.Connect((character) => this.onCharacterAdded(character));
+		this.instance.CharacterRemoving.Connect(() => this.onCharacterRemoving());
+		this.instance.CharacterAppearanceLoaded.Connect(() => this.onCharacterAppearanceLoaded());
+	}
+
+	public tiltCharacter(angle: number): void {
+		if (!this.isAlive) {
+			warn(`${this.instance.Name} is not alive`);
+			return;
+		}
+
+		if (!this.character) {
+			warn(`${this.instance.Name} does not have a character`);
+			return;
+		}
+
+		Events.CharacterTiltChanged.fire(this.getOtherPlayers(), this.character, angle);
+	}
+
+	public equipTool(toolType: ToolType): void {
+		if (!this.isAlive) {
+			warn(`${this.instance.Name} is not alive`);
+			return;
+		}
+
+		if (!this.character) {
+			warn(`${this.instance.Name} does not have a character`);
+			return;
+		}
+
+		const tool = this.tools[toolType];
+		if (!tool) {
+			warn(`${this.instance.Name} does not have a valid ${toolType}`);
+			return;
+		}
+
+		if (this.curTool) {
+			this.curTool.Parent = this.backpack;
+		}
+
+		this.curTool = tool;
+		this.character.Torso.ToolJoint.Part1 = this.curTool.PrimaryPart;
+		this.curTool.Parent = this.character;
+
+		Events.CharacterTiltChanged.fire(this.getOtherPlayers(), this.character);
+	}
+
+	public unequip(): void {
+		if (!this.curTool) {
+			return;
+		}
+
+		if (!this.character) {
+			warn(`${this.instance.Name} does not have a character`);
+			return;
+		}
+
+		this.curTool.Parent = this.backpack;
+		this.character.Torso.ToolJoint.Part1 = undefined;
+		this.curTool = undefined;
+	}
+
+	private getOtherPlayers(): Player[] {
+		return Players.GetPlayers().filter((player) => player !== this.instance);
 	}
 
 	private onCharacterAdded(character: Model): void {
@@ -35,13 +97,16 @@ export class TWPlayerComponent extends DisposableComponent<{}, Player> implement
 			return;
 		}
 
-		this.character = character;
-		this.character.PrimaryPart = this.character.HumanoidRootPart;
+		character.PrimaryPart = character.HumanoidRootPart;
 
 		const toolJoint = new Instance("Motor6D");
 		toolJoint.Name = "ToolJoint";
-		toolJoint.Part0 = this.character.Torso;
-		toolJoint.Parent = this.character.Torso;
+		toolJoint.Part0 = character.Torso;
+		toolJoint.Parent = character.Torso;
+
+		this.character = character as TWCharacterInstance;
+
+		this.isAlive = true;
 
 		this.backpack = this.instance.FindFirstChildOfClass("Backpack");
 		if (!this.backpack) {
@@ -57,8 +122,6 @@ export class TWPlayerComponent extends DisposableComponent<{}, Player> implement
 		}
 		this.tools[ToolType.Hammer] = hammer;
 		this.tools[ToolType.Slingshot] = slingshot;
-
-		this.isAlive = true;
 	}
 
 	private onCharacterRemoving(): void {

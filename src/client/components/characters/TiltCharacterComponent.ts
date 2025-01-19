@@ -1,7 +1,7 @@
 import { BaseComponent, Component } from "@flamework/components";
 import { TweenService, Workspace } from "@rbxts/services";
 import { TILT_SEND_RATE } from "shared/constants";
-import { TWCharacterInstance } from "shared/types";
+import { TWCharacterInstance } from "shared/types/characterTypes";
 
 const MAX_RENDER_DISTANCE = 100;
 
@@ -11,7 +11,7 @@ const JOINT_CFRAMES = {
 	RightShoulder: new CFrame(1, 0.5, 0, 0, 0, 1, 0, 1, 0, -1, 0, 0),
 } as const;
 
-const TWEEN_INFO = new TweenInfo(TILT_SEND_RATE);
+const TWEEN_INFO = new TweenInfo(TILT_SEND_RATE + 0.01, Enum.EasingStyle.Quad, Enum.EasingDirection.Out);
 
 @Component()
 export class TiltCharacterComponent extends BaseComponent<{}, TWCharacterInstance> {
@@ -49,7 +49,7 @@ export class TiltCharacterComponent extends BaseComponent<{}, TWCharacterInstanc
 			rightShoulderC0 = rightShoulderC0.mul(CFrame.Angles(0, 0, angle));
 
 			TweenService.Create(this.instance.Torso.ToolJoint, TWEEN_INFO, {
-				C0: CFrame.Angles(angle, 1.55, 0).mul(CFrame.fromEulerAnglesXYZ(0, -math.pi / 2, 0)),
+				C0: CFrame.Angles(angle, 1.55, 0).mul(CFrame.Angles(0, -math.pi / 2, 0)),
 			}).Play();
 		}
 

@@ -8,7 +8,7 @@ export class SlingshotComponent extends ToolComponent {
 		this.mouseIcon = "rbxassetid://textures/GunCursor.png";
 	}
 
-	public usePrimaryAction(toActivate: boolean): void {
+	public override usePrimaryAction(toActivate: boolean): void {
 		if (!this.twCharacter.combatEnabled) {
 			return;
 		}

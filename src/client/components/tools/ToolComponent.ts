@@ -1,14 +1,13 @@
-import { Component, Components } from "@flamework/components";
+import { BaseComponent, Component, Components } from "@flamework/components";
 import { OnStart } from "@flamework/core";
 import { Players } from "@rbxts/services";
 import { TWCharacterComponent } from "client/components/characters";
-import { DisposableComponent } from "shared/components";
-import { ToolInstance } from "shared/types";
+import { ToolInstance } from "shared/types/toolTypes";
 
 const player = Players.LocalPlayer;
 
 @Component()
-export abstract class ToolComponent extends DisposableComponent<{}, ToolInstance> implements OnStart {
+export abstract class ToolComponent extends BaseComponent<{}, ToolInstance> implements OnStart {
 	public get equipped(): boolean {
 		return this._equipped;
 	}
@@ -31,7 +30,7 @@ export abstract class ToolComponent extends DisposableComponent<{}, ToolInstance
 	}
 
 	protected twCharacter!: TWCharacterComponent;
-	protected animTracks: Partial<Record<"Idle" | "Equip", AnimationTrack>> = {};
+	protected animTracks!: Record<"Idle" | "Equip", AnimationTrack>;
 
 	private _equipped: boolean = false;
 	private _isActive: boolean = false;
@@ -53,13 +52,8 @@ export abstract class ToolComponent extends DisposableComponent<{}, ToolInstance
 		}
 		this.equipped = true;
 
-		if (!this.animTracks.Equip || !this.animTracks.Idle) {
-			warn(`Equip or idle animation track not loaded for ${this.instance.Name}`);
-			return;
-		}
-
-		this.animTracks.Equip.Play();
-		this.animTracks.Idle.Play(0);
+		this.animTracks.Idle.Play();
+		this.animTracks.Equip.Play(0);
 	}
 
 	public unequip(): void {
@@ -91,15 +85,10 @@ export abstract class ToolComponent extends DisposableComponent<{}, ToolInstance
 	}
 
 	private loadAnimations(): void {
-		const animator = this.twCharacter.instance.Humanoid.FindFirstChildOfClass("Animator");
-		if (!animator) {
-			warn("No animator found for character");
-			return;
-		}
-
+		const animator = this.twCharacter.instance.Humanoid.Animator;
 		this.animTracks = {
-			Idle: this.janitor.Add(animator.LoadAnimation(this.instance.Animations.Idle)),
-			Equip: this.janitor.Add(animator.LoadAnimation(this.instance.Animations.Equip)),
+			Idle: animator.LoadAnimation(this.instance.Animations.Idle),
+			Equip: animator.LoadAnimation(this.instance.Animations.Equip),
 		};
 
 		print(`Animation tracks loaded for ${this.instance.Name}`);

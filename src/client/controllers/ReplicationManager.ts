@@ -2,7 +2,7 @@ import { Components } from "@flamework/components";
 import { Controller, OnStart } from "@flamework/core";
 import { TiltCharacterComponent } from "client/components/characters";
 import { Events } from "client/network";
-import { TWCharacterInstance } from "shared/types";
+import { TWCharacterInstance } from "shared/types/characterTypes";
 
 @Controller()
 class ReplicationManager implements OnStart {
