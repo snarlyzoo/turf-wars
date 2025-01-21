@@ -3,11 +3,13 @@ export const enum ToolType {
 	Slingshot = "Slingshot",
 }
 
+type AnimationFolder = Folder & ToolAnimations;
+
 export interface ToolInstance extends Model {
 	Animations: Folder & {
-		R6: Folder & ToolAnimations;
-		R15: Folder & ToolAnimations;
-		Viewmodel: Folder & ToolAnimations;
+		R6: AnimationFolder;
+		R15: AnimationFolder;
+		Viewmodel: AnimationFolder;
 	};
 	Handle: BasePart;
 	Configuration: Configuration;

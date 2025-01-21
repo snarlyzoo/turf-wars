@@ -4,7 +4,7 @@ import { Players } from "@rbxts/services";
 import { TWPlayerComponent } from "server/components";
 
 @Service()
-export class PlayerService implements OnStart {
+export class PlayerRegistry implements OnStart {
 	private twPlayers = new Map<number, TWPlayerComponent>();
 
 	public constructor(private components: Components) {}

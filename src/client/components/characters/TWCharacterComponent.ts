@@ -33,19 +33,33 @@ export class TWCharacterComponent
 		this._combatEnabled = value;
 	}
 
+	public get camera(): Camera {
+		return this._camera;
+	}
+	private set camera(value: Camera) {
+		this._camera = value;
+	}
+
+	public get backpack(): Backpack {
+		return this._backpack;
+	}
+	private set backpack(value: Backpack) {
+		this._backpack = value;
+	}
+
 	private _isAlive: boolean = false;
-	private _combatEnabled: boolean = false;
+	private _combatEnabled: boolean = true;
+
+	private _camera!: Camera;
+	private _backpack!: Backpack;
 
 	private tiltAccumulator: number = 0;
 	private prevTiltAngle: number = 0;
 
-	private camera!: Camera;
-	private backpack!: Backpack;
+	private toolJoint!: Motor6D;
 
 	private tiltCharacter!: TiltCharacterComponent;
-
 	private viewmodel!: ViewmodelComponent;
-	private toolJoint!: Motor6D;
 
 	private tools!: Record<ToolType, ToolComponent>;
 	private curTool?: ToolComponent;
@@ -56,66 +70,42 @@ export class TWCharacterComponent
 
 	public onStart(): void {
 		this.fetchPlayerObjects();
-		this.camera.FieldOfView = FIELD_OF_VIEW;
-		player.CameraMode = Enum.CameraMode.LockFirstPerson;
+		this.initializeCamera();
 
 		this.constructTiltCharacter();
-
 		this.constructViewmodel();
-		this.fetchToolJoint();
-
 		this.constructTools();
 
-		this.instance.Humanoid.Died.Connect(() => this.onDied());
-
 		task.spawn(async () => {
-			try {
-				const viewmodelInstance = await this.viewmodel.waitForViewmodel();
-				this.toolJoint.Part0 = viewmodelInstance.Torso;
-				this.toolJoint.Parent = viewmodelInstance.Torso;
-
-				this.isAlive = true;
-
-				this.equipTool(ToolType.Slingshot);
-			} catch (e) {
-				error(`Viewmodel not found: ${e}`);
-			}
+			await this.attachToolJointToViewmodel();
+			this.equipTool(ToolType.Slingshot);
 		});
+
+		this.isAlive = true;
+
+		this.instance.Humanoid.Died.Connect(() => this.onDied());
 	}
 
 	public onTick(dt: number): void {
-		if (!this.isAlive) {
-			return;
-		}
+		if (!this.isAlive) return;
 
 		this.tiltAccumulator += dt;
 		while (this.tiltAccumulator >= TILT_SEND_RATE) {
-			const tiltAngle = math.asin(this.camera.CFrame.LookVector.Y ?? 0);
-			if (math.abs(tiltAngle - this.prevTiltAngle) >= 0.01) {
-				if (player.CameraMode !== Enum.CameraMode.LockFirstPerson) {
-					this.tiltCharacter.update(tiltAngle);
-				}
-
-				Events.UpdateCharacterTilt.fire(tiltAngle);
-
-				this.prevTiltAngle = tiltAngle;
-			}
-
+			this.updateTilt();
 			this.tiltAccumulator -= TILT_SEND_RATE;
 		}
 	}
 
 	public onRender(): void {
-		if (!this.curTool) {
-			return;
-		}
+		if (!this.curTool) return;
 
-		for (const descendant of this.curTool.instance.GetDescendants()) {
-			if (descendant.IsA("BasePart")) {
-				descendant.CastShadow = false;
-				descendant.LocalTransparencyModifier = 0;
-			}
-		}
+		this.curTool.instance
+			.GetDescendants()
+			.filter((descendant) => descendant.IsA("BasePart"))
+			.forEach((part) => {
+				part.CastShadow = false;
+				part.LocalTransparencyModifier = 0;
+			});
 	}
 
 	public override destroy(): void {
@@ -124,10 +114,12 @@ export class TWCharacterComponent
 		}
 	}
 
+	public getCurrentTool(): ToolComponent | undefined {
+		return this.curTool;
+	}
+
 	public equipTool(toolType: ToolType): void {
-		if (!this.isAlive) {
-			return;
-		}
+		if (!this.isAlive) return;
 
 		const newTool = this.tools[toolType];
 		if (!newTool) {
@@ -160,18 +152,13 @@ export class TWCharacterComponent
 		});
 
 		Events.EquipTool.fire(toolType);
-
 		print(`Equipped ${toolType}`);
 	}
 
 	public unequip(): boolean {
-		if (!this.curTool) {
-			return true;
-		}
+		if (!this.curTool) return true;
 
-		if (this.curTool.isActive) {
-			return false;
-		}
+		if (this.curTool.isActive) return false;
 
 		this.curTool.unequip();
 
@@ -180,33 +167,6 @@ export class TWCharacterComponent
 		this.curTool = undefined;
 
 		return true;
-	}
-
-	private onDied(): void {
-		print("Died");
-
-		this.isAlive = false;
-
-		this.janitor.Cleanup();
-	}
-
-	private fetchToolJoint(): void {
-		if (this.instance.Humanoid.RigType === Enum.HumanoidRigType.R6) {
-			this.toolJoint = (this.instance as R6TWCharacterInstance).Torso.ToolJoint;
-		} else {
-			this.toolJoint = (this.instance as R15TWCharacterInstance).UpperTorso.ToolJoint;
-		}
-	}
-
-	private constructTiltCharacter(): void {
-		print("Constructing tilt character component...");
-
-		this.tiltCharacter = this.components.addComponent<TiltCharacterComponent>(this.instance);
-		this.janitor.Add(() => {
-			this.components.removeComponent<TiltCharacterComponent>(this.instance);
-		});
-
-		print("Tilt character component constructed.");
 	}
 
 	private fetchPlayerObjects(): void {
@@ -221,6 +181,41 @@ export class TWCharacterComponent
 			error("Missing backpack in player instance");
 		}
 		this.backpack = backpack;
+	}
+
+	private fetchToolJoint(): void {
+		if (this.instance.Humanoid.RigType === Enum.HumanoidRigType.R6) {
+			this.toolJoint = (this.instance as R6TWCharacterInstance).Torso.ToolJoint;
+		} else {
+			this.toolJoint = (this.instance as R15TWCharacterInstance).UpperTorso.ToolJoint;
+		}
+	}
+
+	private initializeCamera(): void {
+		this.camera.FieldOfView = FIELD_OF_VIEW;
+		player.CameraMode = Enum.CameraMode.LockFirstPerson;
+	}
+
+	private constructTiltCharacter(): void {
+		print("Constructing tilt character component...");
+
+		this.tiltCharacter = this.components.addComponent<TiltCharacterComponent>(this.instance);
+		this.janitor.Add(() => {
+			this.components.removeComponent<TiltCharacterComponent>(this.instance);
+		});
+
+		print("Tilt character component constructed.");
+	}
+
+	private constructViewmodel(): void {
+		print("Constructing viewmodel component...");
+
+		this.viewmodel = this.components.addComponent<ViewmodelComponent>(this.instance);
+		this.janitor.Add(() => {
+			this.components.removeComponent<ViewmodelComponent>(this.instance);
+		});
+
+		print("Viewmodel component constructed.");
 	}
 
 	private constructTools(): void {
@@ -248,14 +243,35 @@ export class TWCharacterComponent
 		print("Tool components constructed.");
 	}
 
-	private constructViewmodel(): void {
-		print("Constructing viewmodel component...");
+	private async attachToolJointToViewmodel(): Promise<void> {
+		try {
+			this.fetchToolJoint();
 
-		this.viewmodel = this.components.addComponent<ViewmodelComponent>(this.instance);
-		this.janitor.Add(() => {
-			this.components.removeComponent<ViewmodelComponent>(this.instance);
-		});
+			const viewmodelInstance = await this.viewmodel.waitForViewmodel();
+			this.toolJoint.Part0 = viewmodelInstance.Torso;
+			this.toolJoint.Parent = viewmodelInstance.Torso;
+		} catch (e) {
+			error(`Viewmodel not found: ${e}`);
+		}
+	}
 
-		print("Viewmodel component constructed.");
+	private updateTilt(): void {
+		const tiltAngle = math.asin(this.camera.CFrame.LookVector.Y ?? 0);
+		if (math.abs(tiltAngle - this.prevTiltAngle) >= 0.01) {
+			if (player.CameraMode !== Enum.CameraMode.LockFirstPerson) {
+				this.tiltCharacter.update(tiltAngle);
+			}
+			Events.UpdateCharacterTilt.fire(tiltAngle);
+
+			this.prevTiltAngle = tiltAngle;
+		}
+	}
+
+	private onDied(): void {
+		print("Died");
+
+		this.isAlive = false;
+
+		this.janitor.Cleanup();
 	}
 }

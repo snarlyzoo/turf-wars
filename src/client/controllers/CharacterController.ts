@@ -7,7 +7,7 @@ import { ToolType } from "shared/types/toolTypes";
 const player = Players.LocalPlayer;
 
 @Controller()
-export class CharacterController implements OnStart {
+class CharacterController implements OnStart {
 	private twCharacter?: TWCharacterComponent;
 
 	public constructor(private components: Components) {}
@@ -35,6 +35,19 @@ export class CharacterController implements OnStart {
 			false,
 			Enum.KeyCode.Two,
 		);
+
+		ContextActionService.BindAction(
+			"PrimaryToolAction",
+			(actionName, inputState) => this.onToolAction(actionName, inputState),
+			false,
+			Enum.UserInputType.MouseButton1,
+		);
+		ContextActionService.BindAction(
+			"SecondaryToolAction",
+			(actionName, inputState) => this.onToolAction(actionName, inputState),
+			false,
+			Enum.UserInputType.MouseButton2,
+		);
 	}
 
 	private onCharacterAdded(character: Model): void {
@@ -51,12 +64,31 @@ export class CharacterController implements OnStart {
 	}
 
 	private onEquipAction(actionName: string, inputState: Enum.UserInputState): void {
-		if (!this.twCharacter) {
-			return;
-		}
+		if (!this.twCharacter) return;
 
 		if (inputState === Enum.UserInputState.Begin) {
 			this.twCharacter.equipTool(actionName === "EquipPrimary" ? ToolType.Slingshot : ToolType.Hammer);
+		}
+	}
+
+	private onToolAction(actionName: string, inputState: Enum.UserInputState): void {
+		if (!this.twCharacter) return;
+
+		const tool = this.twCharacter.getCurrentTool();
+		if (!tool) return;
+
+		if (inputState === Enum.UserInputState.Begin) {
+			if (actionName === "PrimaryToolAction") {
+				tool.usePrimaryAction(true);
+			} else {
+				tool.useSecondaryAction(true);
+			}
+		} else if (inputState === Enum.UserInputState.End) {
+			if (actionName === "PrimaryToolAction") {
+				tool.usePrimaryAction(false);
+			} else {
+				tool.useSecondaryAction(false);
+			}
 		}
 	}
 }

@@ -7,6 +7,8 @@ interface ClientToServerEvents {
 
 	EquipTool(toolType: ToolType): void;
 	UnequipCurrentTool(): void;
+
+	FireProjectile(origin: Vector3, direction: Vector3, speed: number, timestamp: number): void;
 }
 
 interface ServerToClientEvents {

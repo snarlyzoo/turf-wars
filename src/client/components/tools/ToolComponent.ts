@@ -1,4 +1,5 @@
 import { BaseComponent, Component } from "@flamework/components";
+import Object from "@rbxts/object-utils";
 import { TWCharacterComponent, ViewmodelComponent } from "client/components/characters";
 import { ToolAnimations, ToolInstance } from "shared/types/toolTypes";
 
@@ -30,17 +31,16 @@ export abstract class ToolComponent extends BaseComponent<{}, ToolInstance> {
 	private _mouseIcon: string = "rbxassetid://SystemCursors/Arrow";
 
 	protected twCharacter!: TWCharacterComponent;
+	private viewmodel!: ViewmodelComponent;
 
 	protected charAnimTracks!: Record<keyof ToolAnimations, AnimationTrack>;
 	protected viewmodelAnimTracks!: Record<keyof ToolAnimations, AnimationTrack>;
 
-	private viewmodel!: ViewmodelComponent;
-
-	public constructor() {
-		super();
-	}
-
 	public initialize(twCharacter: TWCharacterComponent, viewmodel: ViewmodelComponent): void {
+		if (this.twCharacter || this.viewmodel) {
+			error("Tool component already initialized");
+		}
+
 		this.twCharacter = twCharacter;
 		this.viewmodel = viewmodel;
 
@@ -48,10 +48,14 @@ export abstract class ToolComponent extends BaseComponent<{}, ToolInstance> {
 	}
 
 	public equip(): void {
-		if (this.equipped) {
+		if (this.equipped) return;
+
+		this.equipped = true;
+
+		if (!this.charAnimTracks || !this.viewmodelAnimTracks) {
+			warn("Tool animations not loaded");
 			return;
 		}
-		this.equipped = true;
 
 		this.charAnimTracks.Idle.Play();
 		this.viewmodelAnimTracks.Idle.Play();
@@ -61,17 +65,11 @@ export abstract class ToolComponent extends BaseComponent<{}, ToolInstance> {
 	}
 
 	public unequip(): void {
-		if (!this.equipped) {
-			return;
-		}
+		if (!this.equipped) return;
 		this.equipped = false;
 
-		for (const [, anim] of pairs(this.charAnimTracks)) {
-			anim.Stop();
-		}
-		for (const [, anim] of pairs(this.viewmodelAnimTracks)) {
-			anim.Stop();
-		}
+		Object.values(this.charAnimTracks).forEach((anim) => anim.Stop());
+		Object.values(this.viewmodelAnimTracks).forEach((anim) => anim.Stop());
 	}
 
 	public abstract usePrimaryAction(toActivate: boolean): void;
@@ -80,28 +78,27 @@ export abstract class ToolComponent extends BaseComponent<{}, ToolInstance> {
 		warn(`Secondary action not implemented for ${this.instance.Name}`);
 	}
 
-	private loadAnimations(): void {
+	private async loadAnimations(): Promise<void> {
 		const charAnimator = this.twCharacter.instance.Humanoid.Animator;
-		const animations =
+		const charAnimations =
 			this.twCharacter.instance.Humanoid.RigType === Enum.HumanoidRigType.R6
 				? this.instance.Animations.R6
 				: this.instance.Animations.R15;
 		this.charAnimTracks = {
-			Idle: charAnimator.LoadAnimation(animations.Idle),
-			Equip: charAnimator.LoadAnimation(animations.Equip),
+			Idle: charAnimator.LoadAnimation(charAnimations.Idle),
+			Equip: charAnimator.LoadAnimation(charAnimations.Equip),
 		};
 
-		task.spawn(async () => {
-			try {
-				const viewmodelAnimator = (await this.viewmodel.waitForViewmodel()).Humanoid.Animator;
-				this.viewmodelAnimTracks = {
-					Idle: viewmodelAnimator.LoadAnimation(this.instance.Animations.Viewmodel.Idle),
-					Equip: viewmodelAnimator.LoadAnimation(this.instance.Animations.Viewmodel.Equip),
-				};
-			} catch (e) {
-				error(`Failed to load viewmodel animations: ${e}`);
-			}
-		});
+		try {
+			const viewmodelAnimator = (await this.viewmodel.waitForViewmodel()).Humanoid.Animator;
+			const viewmodelAnimations = this.instance.Animations.Viewmodel;
+			this.viewmodelAnimTracks = {
+				Idle: viewmodelAnimator.LoadAnimation(viewmodelAnimations.Idle),
+				Equip: viewmodelAnimator.LoadAnimation(viewmodelAnimations.Equip),
+			};
+		} catch (e) {
+			error(`Failed to load viewmodel animations: ${e}`);
+		}
 
 		print(`Animation tracks loaded for ${this.instance.Name}`);
 	}

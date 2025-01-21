@@ -92,6 +92,10 @@ export class TWPlayerComponent extends BaseComponent<{}, Player> implements OnSt
 		Events.CharacterTiltChanged.fire(this.getOtherPlayers(), this.character);
 	}
 
+	public fireProjectile(origin: Vector3, direction: Vector3, speed: number, timestamp: number): void {
+		print(`${this.instance.Name} fired a projectile`);
+	}
+
 	private getOtherPlayers(): Player[] {
 		return Players.GetPlayers().filter((player) => player !== this.instance);
 	}

@@ -29,6 +29,7 @@
 		"@flamework/core": "^1.2.3",
 		"@flamework/networking": "^1.2.3",
 		"@rbxts/janitor": "^1.17.0-ts.1",
+		"@rbxts/object-utils": "^1.0.4",
 		"rbxts-transformer-setget": "^2.0.0"
 	}
 }
