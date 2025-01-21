@@ -5,9 +5,15 @@ export const enum ToolType {
 
 export interface ToolInstance extends Model {
 	Animations: Folder & {
-		Idle: Animation;
-		Equip: Animation;
+		R6: Folder & ToolAnimations;
+		R15: Folder & ToolAnimations;
+		Viewmodel: Folder & ToolAnimations;
 	};
 	Handle: BasePart;
 	Configuration: Configuration;
+}
+
+export interface ToolAnimations {
+	Idle: Animation;
+	Equip: Animation;
 }

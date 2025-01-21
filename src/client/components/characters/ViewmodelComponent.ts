@@ -2,12 +2,12 @@ import { BaseComponent, Component } from "@flamework/components";
 import { OnRender, OnStart } from "@flamework/core";
 import { TweenService, Workspace } from "@rbxts/services";
 import { createViewmodel } from "client/utility";
-import { TWCharacterInstance, ViewmodelInstance } from "shared/types/characterTypes";
+import { HumanoidCharacterInstance, ViewmodelInstance } from "shared/types/characterTypes";
 
 const CAMERA_Y_OFFSET = -1.5;
 
 @Component()
-export class ViewmodelComponent extends BaseComponent<{}, TWCharacterInstance> implements OnStart, OnRender {
+export class ViewmodelComponent extends BaseComponent<{}, HumanoidCharacterInstance> implements OnStart, OnRender {
 	private camera!: Camera;
 
 	private cframeValue!: CFrameValue;
@@ -25,7 +25,8 @@ export class ViewmodelComponent extends BaseComponent<{}, TWCharacterInstance> i
 		this.viewmodel = createViewmodel();
 		this.viewmodel.Parent = this.camera;
 
-		this.instance.Torso.ToolJoint.Part0 = this.viewmodel.Torso;
+		const animator = new Instance("Animator");
+		animator.Parent = this.viewmodel.Humanoid;
 	}
 
 	public onRender(): void {
@@ -35,10 +36,19 @@ export class ViewmodelComponent extends BaseComponent<{}, TWCharacterInstance> i
 
 		const camCFrame = this.camera.CFrame;
 		this.viewmodel.PivotTo(camCFrame.mul(this.cframeValue.Value).add(camCFrame.UpVector.mul(CAMERA_Y_OFFSET)));
+	}
 
-		this.viewmodel.HumanoidRootPart.RootJoint.Transform = this.instance.HumanoidRootPart.RootJoint.Transform;
-		this.viewmodel.Torso["Left Shoulder"].Transform = this.instance.Torso["Left Shoulder"].Transform;
-		this.viewmodel.Torso["Right Shoulder"].Transform = this.instance.Torso["Right Shoulder"].Transform;
+	public async waitForViewmodel(): Promise<ViewmodelInstance> {
+		if (this.viewmodel) {
+			return this.viewmodel;
+		}
+
+		return new Promise((resolve) => {
+			while (!this.viewmodel) {
+				task.wait();
+			}
+			resolve(this.viewmodel);
+		});
 	}
 
 	private fetchCamera(): void {
@@ -81,8 +91,7 @@ export class ViewmodelComponent extends BaseComponent<{}, TWCharacterInstance> i
 				fallTween.Cancel();
 				landTween1.Play();
 			} else if (newState === Enum.HumanoidStateType.Freefall) {
-				landTween1.Cancel();
-				landTween2.Cancel();
+				landTween1.Pause();
 				fallTween.Play();
 			}
 		});

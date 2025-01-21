@@ -1,13 +1,9 @@
-import { BaseComponent, Component, Components } from "@flamework/components";
-import { OnStart } from "@flamework/core";
-import { Players } from "@rbxts/services";
-import { TWCharacterComponent } from "client/components/characters";
-import { ToolInstance } from "shared/types/toolTypes";
-
-const player = Players.LocalPlayer;
+import { BaseComponent, Component } from "@flamework/components";
+import { TWCharacterComponent, ViewmodelComponent } from "client/components/characters";
+import { ToolAnimations, ToolInstance } from "shared/types/toolTypes";
 
 @Component()
-export abstract class ToolComponent extends BaseComponent<{}, ToolInstance> implements OnStart {
+export abstract class ToolComponent extends BaseComponent<{}, ToolInstance> {
 	public get equipped(): boolean {
 		return this._equipped;
 	}
@@ -29,19 +25,24 @@ export abstract class ToolComponent extends BaseComponent<{}, ToolInstance> impl
 		this._mouseIcon = value;
 	}
 
-	protected twCharacter!: TWCharacterComponent;
-	protected animTracks!: Record<"Idle" | "Equip", AnimationTrack>;
-
 	private _equipped: boolean = false;
 	private _isActive: boolean = false;
 	private _mouseIcon: string = "rbxassetid://SystemCursors/Arrow";
 
-	public constructor(private components: Components) {
+	protected twCharacter!: TWCharacterComponent;
+
+	protected charAnimTracks!: Record<keyof ToolAnimations, AnimationTrack>;
+	protected viewmodelAnimTracks!: Record<keyof ToolAnimations, AnimationTrack>;
+
+	private viewmodel!: ViewmodelComponent;
+
+	public constructor() {
 		super();
 	}
 
-	public onStart(): void {
-		this.fetchTWCharacter();
+	public initialize(twCharacter: TWCharacterComponent, viewmodel: ViewmodelComponent): void {
+		this.twCharacter = twCharacter;
+		this.viewmodel = viewmodel;
 
 		this.loadAnimations();
 	}
@@ -52,8 +53,11 @@ export abstract class ToolComponent extends BaseComponent<{}, ToolInstance> impl
 		}
 		this.equipped = true;
 
-		this.animTracks.Idle.Play();
-		this.animTracks.Equip.Play(0);
+		this.charAnimTracks.Idle.Play();
+		this.viewmodelAnimTracks.Idle.Play();
+
+		this.charAnimTracks.Equip.Play(0);
+		this.viewmodelAnimTracks.Equip.Play(0);
 	}
 
 	public unequip(): void {
@@ -62,7 +66,10 @@ export abstract class ToolComponent extends BaseComponent<{}, ToolInstance> impl
 		}
 		this.equipped = false;
 
-		for (const [, anim] of pairs(this.animTracks)) {
+		for (const [, anim] of pairs(this.charAnimTracks)) {
+			anim.Stop();
+		}
+		for (const [, anim] of pairs(this.viewmodelAnimTracks)) {
 			anim.Stop();
 		}
 	}
@@ -73,23 +80,28 @@ export abstract class ToolComponent extends BaseComponent<{}, ToolInstance> impl
 		warn(`Secondary action not implemented for ${this.instance.Name}`);
 	}
 
-	private fetchTWCharacter(): void {
-		if (!player.Character) {
-			error("No character found for local player");
-		}
-		const twCharacter = this.components.getComponent<TWCharacterComponent>(player.Character);
-		if (!twCharacter) {
-			error("No character component found for local player");
-		}
-		this.twCharacter = twCharacter;
-	}
-
 	private loadAnimations(): void {
-		const animator = this.twCharacter.instance.Humanoid.Animator;
-		this.animTracks = {
-			Idle: animator.LoadAnimation(this.instance.Animations.Idle),
-			Equip: animator.LoadAnimation(this.instance.Animations.Equip),
+		const charAnimator = this.twCharacter.instance.Humanoid.Animator;
+		const animations =
+			this.twCharacter.instance.Humanoid.RigType === Enum.HumanoidRigType.R6
+				? this.instance.Animations.R6
+				: this.instance.Animations.R15;
+		this.charAnimTracks = {
+			Idle: charAnimator.LoadAnimation(animations.Idle),
+			Equip: charAnimator.LoadAnimation(animations.Equip),
 		};
+
+		task.spawn(async () => {
+			try {
+				const viewmodelAnimator = (await this.viewmodel.waitForViewmodel()).Humanoid.Animator;
+				this.viewmodelAnimTracks = {
+					Idle: viewmodelAnimator.LoadAnimation(this.instance.Animations.Viewmodel.Idle),
+					Equip: viewmodelAnimator.LoadAnimation(this.instance.Animations.Viewmodel.Equip),
+				};
+			} catch (e) {
+				error(`Failed to load viewmodel animations: ${e}`);
+			}
+		});
 
 		print(`Animation tracks loaded for ${this.instance.Name}`);
 	}

@@ -1,6 +1,5 @@
 import { Players, RunService } from "@rbxts/services";
-import { ViewmodelInstance } from "shared/types/characterTypes";
-import { isR6Character } from "shared/types/typeGuards";
+import { R6CharacterInstance, ViewmodelInstance } from "shared/types/characterTypes";
 
 const VALID_DESCENDANTS = {
 	["Body Colors"]: true,
@@ -25,10 +24,7 @@ export function createViewmodel(): ViewmodelInstance {
 	const viewmodel = Players.CreateHumanoidModelFromDescription(
 		Players.GetHumanoidDescriptionFromUserId(USER_ID),
 		Enum.HumanoidRigType.R6,
-	);
-	if (!isR6Character(viewmodel)) {
-		error("Failed to create R6 character");
-	}
+	) as R6CharacterInstance;
 
 	viewmodel.Name = "Viewmodel";
 

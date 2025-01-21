@@ -1,10 +1,11 @@
 import { Component } from "@flamework/components";
 import { ToolComponent } from "./ToolComponent";
+import { TWCharacterComponent, ViewmodelComponent } from "../characters";
 
 @Component()
 export class SlingshotComponent extends ToolComponent {
-	public override onStart(): void {
-		super.onStart();
+	public override initialize(twCharacter: TWCharacterComponent, viewmodel: ViewmodelComponent): void {
+		super.initialize(twCharacter, viewmodel);
 		this.mouseIcon = "rbxassetid://textures/GunCursor.png";
 	}
 

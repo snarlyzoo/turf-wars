@@ -1,5 +1,5 @@
 import { Networking } from "@flamework/networking";
-import { TWCharacterInstance } from "shared/types/characterTypes";
+import { HumanoidCharacterInstance } from "shared/types/characterTypes";
 import { ToolType } from "shared/types/toolTypes";
 
 interface ClientToServerEvents {
@@ -10,7 +10,7 @@ interface ClientToServerEvents {
 }
 
 interface ServerToClientEvents {
-	CharacterTiltChanged: Networking.Unreliable<(character: TWCharacterInstance, angle?: number) => void>;
+	CharacterTiltChanged: Networking.Unreliable<(character: HumanoidCharacterInstance, angle?: number) => void>;
 }
 
 interface ClientToServerFunctions {}
