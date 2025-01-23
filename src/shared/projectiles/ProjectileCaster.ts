@@ -1,23 +1,30 @@
 import { ReplicatedFirst, RunService, Workspace } from "@rbxts/services";
+import { PriorityQueue } from "shared/classes/Queue";
 import { ProjectileModifier } from "./projectileTypes";
 
-const THREAD_COUNT = 8;
-
 export abstract class ProjectileCaster {
+	private static readonly THREAD_COUNT = 8;
+
 	private static actorFolder: Folder;
 	private static projectileFolder: Folder;
 
-	private static actors: Array<Actor> = [];
+	private static actorQueue: PriorityQueue<Actor>;
 
 	public static initialize(): void {
+		print("Initializing projectile caster...");
+
 		this.createFolders();
 		this.createActors();
 
 		RunService.PostSimulation.Wait();
 
-		for (const actor of this.actors) {
+		for (let i = 0; i < this.actorQueue.size(); i++) {
+			const actor = this.actorQueue.dequeue()!;
 			actor.SendMessage("Initialize", this.projectileFolder);
+			this.actorQueue.enqueue(actor);
 		}
+
+		print("Projectile caster initialized");
 	}
 
 	public static castProjectile(
@@ -26,10 +33,15 @@ export abstract class ProjectileCaster {
 		raycastParams: RaycastParams,
 		projectileModifier?: ProjectileModifier,
 	): void {
-		table.sort(this.actors, (a, b) => {
-			return ((a.GetAttribute("Tasks") as number) ?? 0) < ((b.GetAttribute("Tasks") as number) ?? 0);
-		});
-		this.actors[0].SendMessage("CastProjectile", origin, direction, raycastParams, projectileModifier);
+		const actor = this.actorQueue.dequeue();
+		if (!actor) {
+			warn("No available actors to cast projectile");
+			return;
+		}
+
+		actor.SendMessage("CastProjectile", origin, direction, raycastParams, projectileModifier);
+
+		this.actorQueue.enqueue(actor);
 	}
 
 	private static createFolders(): void {
@@ -48,7 +60,13 @@ export abstract class ProjectileCaster {
 			error("Controller script not found");
 		}
 
-		for (let i = 0; i < THREAD_COUNT; i++) {
+		this.actorQueue = new PriorityQueue<Actor>((a, b) => {
+			const aTasks = (a.GetAttribute("Tasks") as number) ?? 0;
+			const bTasks = (b.GetAttribute("Tasks") as number) ?? 0;
+			return aTasks - bTasks;
+		});
+
+		for (let i = 0; i < this.THREAD_COUNT; i++) {
 			const actor = new Instance("Actor");
 			actor.Parent = this.actorFolder;
 
@@ -56,7 +74,8 @@ export abstract class ProjectileCaster {
 			controller.Disabled = false;
 			controller.Parent = actor;
 
-			this.actors.push(actor);
+			actor.SetAttribute("Tasks", 0);
+			this.actorQueue.enqueue(actor);
 		}
 	}
 }

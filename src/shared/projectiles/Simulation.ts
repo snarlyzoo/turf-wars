@@ -1,18 +1,19 @@
 //!native
 import { RunService, Workspace } from "@rbxts/services";
+import { Queue } from "shared/classes/Queue";
 import { calculatePosition, calculateVelocity } from "shared/utility/physics";
 import { Projectile, ProjectileModifier } from "./projectileTypes";
 
-const MAX_SIMULATION_TIME_FACTOR = 0.5;
-
-const DEFAULT_PROJECTILE_MODIFIER = {
-	speed: 100,
-	gravity: 40,
-	lifetime: 5,
-};
-
 export class Simulation {
-	private queue: Array<Projectile> = [];
+	private readonly MAX_SIMULATION_TIME_FACTOR = 0.5;
+
+	private readonly DEFAULT_PROJECTILE_MODIFIER = {
+		speed: 100,
+		gravity: 40,
+		lifetime: 5,
+	} as const;
+
+	private queue: Queue<Projectile> = new Queue();
 
 	private frameStartTick: number = 0;
 
@@ -33,24 +34,21 @@ export class Simulation {
 		projectileModifier?: ProjectileModifier,
 	): void {
 		const { speed, gravity, lifetime } = {
-			...DEFAULT_PROJECTILE_MODIFIER,
+			...this.DEFAULT_PROJECTILE_MODIFIER,
 			...projectileModifier,
 		};
+
 		const tick = os.clock();
 
 		const projectile: Projectile = {
 			position: origin,
 			velocity: direction.mul(speed),
 			acceleration: new Vector3(0, -gravity, 0),
-
-			raycastParams: raycastParams,
-
-			lifetime: lifetime,
+			raycastParams,
+			lifetime,
 			startTick: tick,
 			lastTick: tick,
-
 			timestamp: projectileModifier?.timestamp,
-
 			onImpact: projectileModifier?.onImpact,
 		};
 
@@ -63,13 +61,61 @@ export class Simulation {
 			projectile.pvInstance = pvInstance;
 		}
 
-		this.queue.push(projectile);
-
+		this.queue.enqueue(projectile);
 		this.incrementTasks(1);
 	}
 
 	private incrementTasks(amount: number): void {
 		this.actor.SetAttribute("Tasks", (this.actor.GetAttribute("Tasks") as number) ?? 0 + amount);
+	}
+
+	private processProjectile(
+		projectile: Projectile,
+		impacted: Map<Projectile, RaycastResult>,
+		destroyed: Array<Projectile>,
+	): void {
+		const tick = os.clock();
+		const dt = tick - projectile.lastTick;
+		const curPosition = projectile.position;
+		const nextPosition = calculatePosition(curPosition, projectile.velocity, projectile.acceleration, dt);
+
+		const raycastResult = Workspace.Raycast(curPosition, nextPosition.sub(curPosition), projectile.raycastParams);
+		if (raycastResult) {
+			if (projectile.onImpact) {
+				projectile.onImpact.Fire(raycastResult);
+			}
+			impacted.set(projectile, raycastResult);
+			destroyed.push(projectile);
+			return;
+		}
+
+		if (tick - projectile.startTick > projectile.lifetime) {
+			destroyed.push(projectile);
+			return;
+		}
+
+		projectile.position = nextPosition;
+		projectile.velocity = calculateVelocity(projectile.velocity, projectile.acceleration, dt);
+		projectile.lastTick = tick;
+
+		this.queue.enqueue(projectile);
+	}
+
+	private handleImpacts(impacted: Map<Projectile, RaycastResult>): void {
+		for (const [projectile, raycastResult] of impacted) {
+			if (projectile.onImpact) {
+				projectile.onImpact.Fire(raycastResult);
+			}
+		}
+	}
+
+	private cleanupDestroyed(destroyed: Array<Projectile>): void {
+		for (const projectile of destroyed) {
+			if (projectile.pvInstance) {
+				projectile.pvInstance.Destroy();
+			}
+			this.incrementTasks(-1);
+		}
 	}
 
 	private onPreSimulation(): void {
@@ -80,69 +126,32 @@ export class Simulation {
 		debug.profilebegin("Projectile Simulation");
 
 		const startTick = os.clock();
-		const maxSimTime = (deltaTime - (startTick - this.frameStartTick)) * MAX_SIMULATION_TIME_FACTOR;
+		const maxSimTime = (deltaTime - (startTick - this.frameStartTick)) * this.MAX_SIMULATION_TIME_FACTOR;
 
 		const impacted: Map<Projectile, RaycastResult> = new Map();
 		const destroyed: Array<Projectile> = [];
 		for (let i = 0; i < this.queue.size(); i++) {
-			const tick = os.clock();
-			if (tick - startTick > maxSimTime) {
+			if (os.clock() - startTick > maxSimTime) {
 				warn("Simulation exceeded maximum time limit");
 				break;
 			}
 
-			const projectile = this.queue.shift()!;
-
-			const dt = tick - projectile.lastTick;
-			const curPosition = projectile.position;
-			const nextPosition = calculatePosition(curPosition, projectile.velocity, projectile.acceleration, dt);
-
-			const raycastResult = Workspace.Raycast(
-				curPosition,
-				nextPosition.sub(curPosition),
-				projectile.raycastParams,
-			);
-			if (raycastResult) {
-				impacted.set(projectile, raycastResult);
-				destroyed.push(projectile);
-				continue;
-			}
-
-			if (tick - projectile.startTick > projectile.lifetime) {
-				destroyed.push(projectile);
-				continue;
-			}
-
-			projectile.position = nextPosition;
-			projectile.velocity = calculateVelocity(projectile.velocity, projectile.acceleration, dt);
-			projectile.lastTick = tick;
-
-			this.queue.push(projectile);
+			this.processProjectile(this.queue.dequeue()!, impacted, destroyed);
 		}
 
 		debug.profileend();
 
 		task.synchronize();
 
-		for (const [projectile, raycastResult] of impacted) {
-			if (projectile.onImpact) {
-				projectile.onImpact.Fire(raycastResult);
-			}
-		}
-
-		for (const projectile of destroyed) {
-			if (projectile.pvInstance) {
-				projectile.pvInstance.Destroy();
-			}
-			this.incrementTasks(-1);
-		}
+		this.handleImpacts(impacted);
+		this.cleanupDestroyed(destroyed);
 	}
 
 	private onPreRender(): void {
 		const parts: Array<BasePart> = [];
 		const cframes: Array<CFrame> = [];
 		for (let i = 0; i < this.queue.size(); i++) {
-			const projectile = this.queue[i];
+			const projectile = this.queue.dequeue()!;
 
 			const pvInstance = projectile.pvInstance;
 			if (!pvInstance) {
@@ -156,6 +165,8 @@ export class Simulation {
 			} else {
 				pvInstance.PivotTo(cframe);
 			}
+
+			this.queue.enqueue(projectile);
 		}
 
 		task.synchronize();
