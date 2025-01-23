@@ -3,7 +3,7 @@ import { PriorityQueue } from "shared/classes/Queue";
 import { ProjectileModifier } from "./projectileTypes";
 
 export abstract class ProjectileCaster {
-	private static readonly THREAD_COUNT = 8;
+	private static readonly THREAD_COUNT: number = 8;
 
 	private static actorFolder: Folder;
 	private static projectileFolder: Folder;
@@ -56,9 +56,7 @@ export abstract class ProjectileCaster {
 
 	private static createActors(): void {
 		const controllerScript = script.Parent?.FindFirstChild("controller") as LocalScript;
-		if (!controllerScript) {
-			error("Controller script not found");
-		}
+		if (!controllerScript) error("Controller script not found");
 
 		this.actorQueue = new PriorityQueue<Actor>((a, b) => {
 			const aTasks = (a.GetAttribute("Tasks") as number) ?? 0;

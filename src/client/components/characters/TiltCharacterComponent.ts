@@ -4,23 +4,27 @@ import { TweenService, Workspace } from "@rbxts/services";
 import { TILT_SEND_RATE } from "shared/constants";
 import { HumanoidCharacterInstance, R6TWCharacterInstance, R15TWCharacterInstance } from "shared/types/characterTypes";
 
-const MAX_RENDER_DISTANCE = 100;
-
-const R15_JOINT_CFRAMES = {
-	Neck: new CFrame(0, 1, 0),
-	LeftShoulder: new CFrame(-1, 0.5, 0),
-	RightShoulder: new CFrame(1, 0.5, 0),
-} as const;
-const R6_JOINT_CFRAMES = {
-	Neck: R15_JOINT_CFRAMES.Neck,
-	LeftShoulder: R15_JOINT_CFRAMES.LeftShoulder.mul(CFrame.Angles(0, math.rad(-90), 0)),
-	RightShoulder: R15_JOINT_CFRAMES.RightShoulder.mul(CFrame.Angles(0, math.rad(90), 0)),
-} as const;
-
-const TWEEN_INFO = new TweenInfo(TILT_SEND_RATE + 0.01, Enum.EasingStyle.Quad, Enum.EasingDirection.Out);
-
 @Component()
 export class TiltCharacterComponent extends BaseComponent<{}, HumanoidCharacterInstance> implements OnStart {
+	private readonly MAX_RENDER_DISTANCE: number = 100;
+
+	private readonly TWEEN_INFO: TweenInfo = new TweenInfo(
+		TILT_SEND_RATE + 0.01,
+		Enum.EasingStyle.Quad,
+		Enum.EasingDirection.Out,
+	);
+
+	private readonly R6_JOINT_CFRAMES = {
+		Neck: new CFrame(0, 1, 0),
+		LeftShoulder: new CFrame(-1, 0.5, 0).mul(CFrame.Angles(0, math.rad(-90), 0)),
+		RightShoulder: new CFrame(1, 0.5, 0).mul(CFrame.Angles(0, math.rad(90), 0)),
+	} as const;
+	private readonly R15_JOINT_CFRAMES = {
+		Neck: new CFrame(0, 1, 0),
+		LeftShoulder: new CFrame(-1, 0.5, 0),
+		RightShoulder: new CFrame(1, 0.5, 0),
+	} as const;
+
 	private lastAngle: number = 0;
 
 	private neck!: Motor6D;
@@ -33,26 +37,21 @@ export class TiltCharacterComponent extends BaseComponent<{}, HumanoidCharacterI
 	}
 
 	public update(angle?: number): void {
-		if (angle !== undefined && angle === this.lastAngle) {
-			return;
-		}
+		if (angle !== undefined && angle === this.lastAngle) return;
 
 		const distance = Workspace.CurrentCamera?.CFrame.Position.sub(this.instance.GetPivot().Position).Magnitude;
-		if (distance === undefined || distance > MAX_RENDER_DISTANCE) {
-			return;
-		}
+		if (distance === undefined || distance > this.MAX_RENDER_DISTANCE) return;
 
 		const target = angle ?? this.lastAngle;
 
 		const isR6Character = this.instance.Humanoid.RigType === Enum.HumanoidRigType.R6;
-
-		TweenService.Create(this.neck, TWEEN_INFO, {
-			C0: isR6Character ? this.calculateR6NeckC0(target) : this.calculateR15NeckC0(target),
-		}).Play();
-
 		const [leftShoulderC0, rightShoulderC0, toolJointC0] = isR6Character
 			? this.calculateR6ShoulderC0s(target)
 			: this.calculateR15ShoulderC0s(target);
+
+		TweenService.Create(this.neck, this.TWEEN_INFO, {
+			C0: isR6Character ? this.calculateR6NeckC0(target) : this.calculateR15NeckC0(target),
+		}).Play();
 
 		/**
 		 * Tweens the shoulder joints only if the new C0 differs from the current C0.
@@ -61,13 +60,13 @@ export class TiltCharacterComponent extends BaseComponent<{}, HumanoidCharacterI
 		 */
 		if (this.rightShoulder.C0 !== rightShoulderC0) {
 			if (this.toolJoint.Part1?.GetAttribute("TwoHanded") === true) {
-				TweenService.Create(this.leftShoulder, TWEEN_INFO, { C0: leftShoulderC0 }).Play();
+				TweenService.Create(this.leftShoulder, this.TWEEN_INFO, { C0: leftShoulderC0 }).Play();
 			}
-			TweenService.Create(this.rightShoulder, TWEEN_INFO, { C0: rightShoulderC0 }).Play();
+			TweenService.Create(this.rightShoulder, this.TWEEN_INFO, { C0: rightShoulderC0 }).Play();
 		}
 
 		if (toolJointC0) {
-			TweenService.Create(this.toolJoint, TWEEN_INFO, { C0: toolJointC0 }).Play();
+			TweenService.Create(this.toolJoint, this.TWEEN_INFO, { C0: toolJointC0 }).Play();
 		}
 
 		this.lastAngle = target;
@@ -90,15 +89,15 @@ export class TiltCharacterComponent extends BaseComponent<{}, HumanoidCharacterI
 	}
 
 	private calculateR6NeckC0(angle: number): CFrame {
-		return R6_JOINT_CFRAMES.Neck.mul(CFrame.Angles(angle + math.rad(-90), 0, math.rad(180)));
+		return this.R6_JOINT_CFRAMES.Neck.mul(CFrame.Angles(angle + math.rad(-90), 0, math.rad(180)));
 	}
 	private calculateR15NeckC0(angle: number): CFrame {
-		return R15_JOINT_CFRAMES.Neck.mul(CFrame.Angles(angle, 0, 0));
+		return this.R15_JOINT_CFRAMES.Neck.mul(CFrame.Angles(angle, 0, 0));
 	}
 
 	private calculateR6ShoulderC0s(angle: number): [CFrame, CFrame, CFrame | undefined] {
-		let leftShoulderC0 = R6_JOINT_CFRAMES.LeftShoulder;
-		let rightShoulderC0 = R6_JOINT_CFRAMES.RightShoulder;
+		let leftShoulderC0 = this.R6_JOINT_CFRAMES.LeftShoulder;
+		let rightShoulderC0 = this.R6_JOINT_CFRAMES.RightShoulder;
 		let toolJointC0;
 		if (this.toolJoint.Part1 !== undefined) {
 			leftShoulderC0 = leftShoulderC0.mul(CFrame.Angles(0, 0, -angle));
@@ -108,8 +107,8 @@ export class TiltCharacterComponent extends BaseComponent<{}, HumanoidCharacterI
 		return [leftShoulderC0, rightShoulderC0, toolJointC0];
 	}
 	private calculateR15ShoulderC0s(angle: number): [CFrame, CFrame, CFrame | undefined] {
-		let leftShoulderC0 = R15_JOINT_CFRAMES.LeftShoulder;
-		let rightShoulderC0 = R15_JOINT_CFRAMES.RightShoulder;
+		let leftShoulderC0 = this.R15_JOINT_CFRAMES.LeftShoulder;
+		let rightShoulderC0 = this.R15_JOINT_CFRAMES.RightShoulder;
 		let toolJointC0;
 		if (this.toolJoint.Part1 !== undefined) {
 			leftShoulderC0 = leftShoulderC0.mul(CFrame.Angles(angle, 0, 0));

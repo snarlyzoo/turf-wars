@@ -1,1 +1,0 @@
-export { createViewmodel } from "./createViewmodel";

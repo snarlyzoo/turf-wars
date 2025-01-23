@@ -1,52 +1,57 @@
 import { BaseComponent, Component } from "@flamework/components";
 import { OnRender, OnStart } from "@flamework/core";
-import { TweenService, Workspace } from "@rbxts/services";
-import { createViewmodel } from "client/utility";
-import { HumanoidCharacterInstance, ViewmodelInstance } from "shared/types/characterTypes";
-
-const CAMERA_Y_OFFSET = -1.5;
+import { Players, RunService, TweenService, Workspace } from "@rbxts/services";
+import { HumanoidCharacterInstance, R6CharacterInstance, ViewmodelInstance } from "shared/types/characterTypes";
 
 @Component()
 export class ViewmodelComponent extends BaseComponent<{}, HumanoidCharacterInstance> implements OnStart, OnRender {
+	private readonly USER_ID: number = RunService.IsStudio() ? 107484074 : Players.LocalPlayer.UserId;
+
+	private readonly CAMERA_Y_OFFSET: number = -1.5;
+
+	private readonly COLLISION_GROUP: string = "Viewmodel";
+	private readonly ARM_SIZE: Vector3 = new Vector3(0.5, 2, 0.5);
+
+	private readonly VALID_DESCENDANTS = {
+		["Body Colors"]: true,
+		["Shirt"]: true,
+		["Humanoid"]: true,
+		["HumanoidRootPart"]: true,
+		["Left Arm"]: true,
+		["Right Arm"]: true,
+		["Torso"]: true,
+		["Left Shoulder"]: true,
+		["Right Shoulder"]: true,
+		["RootJoint"]: true,
+	} as const;
+
 	private camera!: Camera;
 
 	private cframeValue!: CFrameValue;
 	private viewmodel!: ViewmodelInstance;
 
-	public constructor() {
-		super();
-	}
-
 	public onStart(): void {
 		this.fetchCamera();
 
+		this.createViewmodel();
 		this.createCFrameValue();
-
-		this.viewmodel = createViewmodel();
-		this.viewmodel.Parent = this.camera;
 
 		const animator = new Instance("Animator");
 		animator.Parent = this.viewmodel.Humanoid;
 	}
 
 	public onRender(): void {
-		if (!this.viewmodel) {
-			return;
-		}
+		if (!this.viewmodel) return;
 
 		const camCFrame = this.camera.CFrame;
-		this.viewmodel.PivotTo(camCFrame.mul(this.cframeValue.Value).add(camCFrame.UpVector.mul(CAMERA_Y_OFFSET)));
+		this.viewmodel.PivotTo(camCFrame.mul(this.cframeValue.Value).add(camCFrame.UpVector.mul(this.CAMERA_Y_OFFSET)));
 	}
 
 	public async waitForViewmodel(): Promise<ViewmodelInstance> {
-		if (this.viewmodel) {
-			return this.viewmodel;
-		}
+		if (this.viewmodel) return this.viewmodel;
 
 		return new Promise((resolve) => {
-			while (!this.viewmodel) {
-				task.wait();
-			}
+			while (!this.viewmodel) task.wait();
 			resolve(this.viewmodel);
 		});
 	}
@@ -57,6 +62,40 @@ export class ViewmodelComponent extends BaseComponent<{}, HumanoidCharacterInsta
 			error("Missing camera in Workspace");
 		}
 		this.camera = camera;
+	}
+
+	private createViewmodel(): void {
+		const viewmodel = Players.CreateHumanoidModelFromDescription(
+			Players.GetHumanoidDescriptionFromUserId(this.USER_ID),
+			Enum.HumanoidRigType.R6,
+		) as R6CharacterInstance;
+
+		viewmodel.Name = "Viewmodel";
+
+		viewmodel.HumanoidRootPart.Anchored = true;
+		viewmodel.PrimaryPart = viewmodel.HumanoidRootPart;
+
+		viewmodel.Humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None;
+		viewmodel.Humanoid.EvaluateStateMachine = false;
+		viewmodel.Humanoid.RequiresNeck = false;
+
+		for (const descendant of viewmodel.GetDescendants()) {
+			if (!(descendant.Name in this.VALID_DESCENDANTS)) {
+				descendant.Destroy();
+			} else if (descendant.IsA("BasePart")) {
+				descendant.CastShadow = false;
+				descendant.CollisionGroup = this.COLLISION_GROUP;
+				descendant.Massless = true;
+			}
+		}
+
+		viewmodel.Torso.Transparency = 1;
+
+		viewmodel["Left Arm"].Size = this.ARM_SIZE;
+		viewmodel["Right Arm"].Size = this.ARM_SIZE;
+
+		this.viewmodel = viewmodel as ViewmodelInstance;
+		this.viewmodel.Parent = this.camera;
 	}
 
 	private createCFrameValue(): void {

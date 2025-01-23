@@ -5,7 +5,7 @@ import { calculatePosition, calculateVelocity } from "shared/utility/physics";
 import { Projectile, ProjectileModifier } from "./projectileTypes";
 
 export class Simulation {
-	private readonly MAX_SIMULATION_TIME_FACTOR = 0.5;
+	private readonly MAX_SIMULATION_TIME_FACTOR: number = 0.5;
 
 	private readonly DEFAULT_PROJECTILE_MODIFIER = {
 		speed: 100,
@@ -54,9 +54,7 @@ export class Simulation {
 
 		if (projectileModifier?.pvInstance) {
 			const pvInstance = projectileModifier.pvInstance.Clone();
-			if (pvInstance.IsA("BasePart") && projectileModifier.color) {
-				pvInstance.Color = projectileModifier.color;
-			}
+			if (pvInstance.IsA("BasePart") && projectileModifier.color) pvInstance.Color = projectileModifier.color;
 			pvInstance.Parent = this.folder;
 			projectile.pvInstance = pvInstance;
 		}
@@ -81,9 +79,6 @@ export class Simulation {
 
 		const raycastResult = Workspace.Raycast(curPosition, nextPosition.sub(curPosition), projectile.raycastParams);
 		if (raycastResult) {
-			if (projectile.onImpact) {
-				projectile.onImpact.Fire(raycastResult);
-			}
 			impacted.set(projectile, raycastResult);
 			destroyed.push(projectile);
 			return;
@@ -103,17 +98,13 @@ export class Simulation {
 
 	private handleImpacts(impacted: Map<Projectile, RaycastResult>): void {
 		for (const [projectile, raycastResult] of impacted) {
-			if (projectile.onImpact) {
-				projectile.onImpact.Fire(raycastResult);
-			}
+			if (projectile.onImpact) projectile.onImpact.Fire(raycastResult);
 		}
 	}
 
 	private cleanupDestroyed(destroyed: Array<Projectile>): void {
 		for (const projectile of destroyed) {
-			if (projectile.pvInstance) {
-				projectile.pvInstance.Destroy();
-			}
+			if (projectile.pvInstance) projectile.pvInstance.Destroy();
 			this.incrementTasks(-1);
 		}
 	}
@@ -135,7 +126,6 @@ export class Simulation {
 				warn("Simulation exceeded maximum time limit");
 				break;
 			}
-
 			this.processProjectile(this.queue.dequeue()!, impacted, destroyed);
 		}
 
@@ -154,9 +144,7 @@ export class Simulation {
 			const projectile = this.queue.dequeue()!;
 
 			const pvInstance = projectile.pvInstance;
-			if (!pvInstance) {
-				continue;
-			}
+			if (!pvInstance) continue;
 
 			const cframe = CFrame.lookAt(projectile.position, projectile.position.add(projectile.velocity));
 			if (pvInstance.IsA("BasePart")) {
@@ -171,8 +159,6 @@ export class Simulation {
 
 		task.synchronize();
 
-		if (parts.size() > 0) {
-			Workspace.BulkMoveTo(parts, cframes);
-		}
+		if (parts.size() > 0) Workspace.BulkMoveTo(parts, cframes);
 	}
 }

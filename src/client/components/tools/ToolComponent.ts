@@ -37,9 +37,7 @@ export abstract class ToolComponent extends BaseComponent<{}, ToolInstance> {
 	protected viewmodelAnimTracks!: Record<keyof ToolAnimations, AnimationTrack>;
 
 	public initialize(twCharacter: TWCharacterComponent, viewmodel: ViewmodelComponent): void {
-		if (this.twCharacter || this.viewmodel) {
-			error("Tool component already initialized");
-		}
+		if (this.twCharacter || this.viewmodel) error("Tool component already initialized");
 
 		this.twCharacter = twCharacter;
 		this.viewmodel = viewmodel;

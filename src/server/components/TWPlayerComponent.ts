@@ -6,11 +6,11 @@ import { HumanoidCharacterInstance, R15CharacterInstance, R6CharacterInstance } 
 import { ToolInstance, ToolType } from "shared/types/toolTypes";
 import { findFirstChildWithTag } from "shared/utility";
 
-const isHumanoidCharacter = Flamework.createGuard<HumanoidCharacterInstance>();
-const isToolInstance = Flamework.createGuard<ToolInstance>();
-
 @Component()
 export class TWPlayerComponent extends BaseComponent<{}, Player> implements OnStart {
+	private readonly isHumanoidCharacter = Flamework.createGuard<HumanoidCharacterInstance>();
+	private readonly isToolInstance = Flamework.createGuard<ToolInstance>();
+
 	public get isAlive(): boolean {
 		return this._isAlive;
 	}
@@ -64,9 +64,7 @@ export class TWPlayerComponent extends BaseComponent<{}, Player> implements OnSt
 			return;
 		}
 
-		if (this.curTool) {
-			this.curTool.Parent = this.backpack;
-		}
+		if (this.curTool) this.curTool.Parent = this.backpack;
 
 		this.curTool = tool;
 		this.toolJoint.Part1 = this.curTool.PrimaryPart;
@@ -101,7 +99,7 @@ export class TWPlayerComponent extends BaseComponent<{}, Player> implements OnSt
 	}
 
 	private onCharacterAdded(character: Model): void {
-		if (!isHumanoidCharacter(character)) {
+		if (!this.isHumanoidCharacter(character)) {
 			warn(`${this.instance.Name} does not have a humanoid character`);
 			return;
 		}
@@ -126,7 +124,7 @@ export class TWPlayerComponent extends BaseComponent<{}, Player> implements OnSt
 
 		const hammer = findFirstChildWithTag(this.backpack, ToolType.Hammer);
 		const slingshot = findFirstChildWithTag(this.backpack, ToolType.Slingshot);
-		if (!(hammer && isToolInstance(hammer)) || !(slingshot && isToolInstance(slingshot))) {
+		if (!(hammer && this.isToolInstance(hammer)) || !(slingshot && this.isToolInstance(slingshot))) {
 			warn(`${this.instance.Name} does not have a valid hammer or slingshot`);
 			return;
 		}
@@ -135,9 +133,7 @@ export class TWPlayerComponent extends BaseComponent<{}, Player> implements OnSt
 	}
 
 	private onCharacterRemoving(): void {
-		if (this.isAlive) {
-			this.onDied();
-		}
+		if (this.isAlive) this.onDied();
 	}
 
 	private onCharacterAppearanceLoaded(): void {
@@ -158,7 +154,6 @@ export class TWPlayerComponent extends BaseComponent<{}, Player> implements OnSt
 
 	private onDied(): void {
 		this.isAlive = false;
-
 		this.tools = {};
 	}
 }

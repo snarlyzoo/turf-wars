@@ -22,9 +22,7 @@ export class Queue<T> {
 	}
 
 	public enqueue(value: T): void {
-		if (this.count === this.capacity) {
-			this.resize();
-		}
+		if (this.count === this.capacity) this.resize();
 
 		this.buffer[this.tail] = value;
 		this.tail = (this.tail + 1) % this.capacity;

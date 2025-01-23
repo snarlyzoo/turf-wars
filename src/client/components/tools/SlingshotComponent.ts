@@ -13,8 +13,6 @@ const RPM = 400;
 
 const PROJECTILE_MODEL = ReplicatedStorage.FindFirstChild("Effects")?.FindFirstChild("Projectile") as Part;
 
-const player = Players.LocalPlayer;
-
 @Component()
 export class SlingshotComponent extends ToolComponent {
 	private toFire: boolean = false;
@@ -38,9 +36,7 @@ export class SlingshotComponent extends ToolComponent {
 
 		let speed = START_SPEED;
 		const tick = os.clock();
-		while (this.equipped && this.toFire && this.twCharacter.combatEnabled) {
-			task.wait();
-		}
+		while (this.equipped && this.toFire && this.twCharacter.combatEnabled) task.wait();
 		speed = math.min(speed + DRAW_SPEED * (os.clock() - tick), MAX_SPEED);
 
 		print(`Firing projectile at speed: ${speed}`);
@@ -58,7 +54,7 @@ export class SlingshotComponent extends ToolComponent {
 			const projectileModifier: ProjectileModifier = {
 				speed: speed,
 				pvInstance: PROJECTILE_MODEL,
-				color: player.Team?.TeamColor.Color,
+				color: this.twCharacter.player.Team?.TeamColor.Color,
 				timestamp: timestamp,
 				onImpact: this.projectileImpactEvent,
 			};

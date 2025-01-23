@@ -1,8 +1,10 @@
 import { Component, Components } from "@flamework/components";
 import { OnRender, OnStart, OnTick } from "@flamework/core";
-import { Players, RunService, Workspace } from "@rbxts/services";
+import Object from "@rbxts/object-utils";
+import { RunService, Workspace } from "@rbxts/services";
 import { TiltCharacterComponent, ViewmodelComponent } from "client/components/characters";
 import { HammerComponent, SlingshotComponent, ToolComponent } from "client/components/tools";
+import { CharacterController } from "client/controllers";
 import { Events } from "client/network";
 import { DisposableComponent } from "shared/components";
 import { TILT_SEND_RATE } from "shared/constants";
@@ -10,15 +12,13 @@ import { HumanoidCharacterInstance, R6TWCharacterInstance, R15TWCharacterInstanc
 import { ToolType } from "shared/types/toolTypes";
 import { findFirstChildWithTag } from "shared/utility";
 
-const FIELD_OF_VIEW = 90;
-
-const player = Players.LocalPlayer;
-
 @Component()
 export class TWCharacterComponent
 	extends DisposableComponent<{}, HumanoidCharacterInstance>
 	implements OnStart, OnTick, OnRender
 {
+	private readonly FIELD_OF_VIEW: number = 90;
+
 	public get isAlive(): boolean {
 		return this._isAlive;
 	}
@@ -31,6 +31,10 @@ export class TWCharacterComponent
 	}
 	private set combatEnabled(value: boolean) {
 		this._combatEnabled = value;
+	}
+
+	public get player(): Player {
+		return this._player;
 	}
 
 	public get camera(): Camera {
@@ -50,6 +54,7 @@ export class TWCharacterComponent
 	private _isAlive: boolean = false;
 	private _combatEnabled: boolean = true;
 
+	private _player: Player;
 	private _camera!: Camera;
 	private _backpack!: Backpack;
 
@@ -64,8 +69,9 @@ export class TWCharacterComponent
 	private tools!: Record<ToolType, ToolComponent>;
 	private curTool?: ToolComponent;
 
-	public constructor(private components: Components) {
+	public constructor(characterController: CharacterController, private components: Components) {
 		super();
+		this._player = characterController.player;
 	}
 
 	public onStart(): void {
@@ -109,9 +115,7 @@ export class TWCharacterComponent
 	}
 
 	public override destroy(): void {
-		if (this.isAlive) {
-			this.onDied();
-		}
+		if (this.isAlive) this.onDied();
 	}
 
 	public getCurrentTool(): ToolComponent | undefined {
@@ -128,9 +132,7 @@ export class TWCharacterComponent
 		}
 
 		const prevTool = this.curTool;
-		if (!this.unequip()) {
-			return;
-		}
+		if (!this.unequip()) return;
 		if (prevTool === newTool) {
 			Events.UnequipCurrentTool.fire();
 			return;
@@ -171,29 +173,24 @@ export class TWCharacterComponent
 
 	private fetchPlayerObjects(): void {
 		const camera = Workspace.CurrentCamera;
-		if (!camera) {
-			error("Missing camera in workspace");
-		}
+		if (!camera) error("Missing camera in workspace");
 		this.camera = camera;
 
-		const backpack = player.FindFirstChildOfClass("Backpack");
-		if (!backpack) {
-			error("Missing backpack in player instance");
-		}
+		const backpack = this.player.FindFirstChildOfClass("Backpack");
+		if (!backpack) error("Missing backpack in player instance");
 		this.backpack = backpack;
 	}
 
 	private fetchToolJoint(): void {
-		if (this.instance.Humanoid.RigType === Enum.HumanoidRigType.R6) {
-			this.toolJoint = (this.instance as R6TWCharacterInstance).Torso.ToolJoint;
-		} else {
-			this.toolJoint = (this.instance as R15TWCharacterInstance).UpperTorso.ToolJoint;
-		}
+		this.toolJoint =
+			this.instance.Humanoid.RigType === Enum.HumanoidRigType.R6
+				? (this.instance as R6TWCharacterInstance).Torso.ToolJoint
+				: (this.instance as R15TWCharacterInstance).UpperTorso.ToolJoint;
 	}
 
 	private initializeCamera(): void {
-		this.camera.FieldOfView = FIELD_OF_VIEW;
-		player.CameraMode = Enum.CameraMode.LockFirstPerson;
+		this.player.CameraMode = Enum.CameraMode.LockFirstPerson;
+		this.camera.FieldOfView = this.FIELD_OF_VIEW;
 	}
 
 	private constructTiltCharacter(): void {
@@ -221,9 +218,7 @@ export class TWCharacterComponent
 	private constructTools(): void {
 		const hammer = findFirstChildWithTag(this.backpack, ToolType.Hammer);
 		const slingshot = findFirstChildWithTag(this.backpack, ToolType.Slingshot);
-		if (!hammer || !slingshot) {
-			error("Missing tool instances in backpack");
-		}
+		if (!hammer || !slingshot) error("Missing tool instances in backpack");
 
 		print("Constructing tool components...");
 
@@ -231,9 +226,7 @@ export class TWCharacterComponent
 			[ToolType.Hammer]: this.components.addComponent<HammerComponent>(hammer),
 			[ToolType.Slingshot]: this.components.addComponent<SlingshotComponent>(slingshot),
 		};
-		for (const [_, tool] of pairs(this.tools)) {
-			tool.initialize(this, this.viewmodel);
-		}
+		for (const tool of Object.values(this.tools)) tool.initialize(this, this.viewmodel);
 
 		this.janitor.Add(() => {
 			this.components.removeComponent<HammerComponent>(hammer);
@@ -245,9 +238,9 @@ export class TWCharacterComponent
 
 	private async attachToolJointToViewmodel(): Promise<void> {
 		try {
-			this.fetchToolJoint();
-
 			const viewmodelInstance = await this.viewmodel.waitForViewmodel();
+
+			this.fetchToolJoint();
 			this.toolJoint.Part0 = viewmodelInstance.Torso;
 			this.toolJoint.Parent = viewmodelInstance.Torso;
 		} catch (e) {
@@ -258,20 +251,15 @@ export class TWCharacterComponent
 	private updateTilt(): void {
 		const tiltAngle = math.asin(this.camera.CFrame.LookVector.Y ?? 0);
 		if (math.abs(tiltAngle - this.prevTiltAngle) >= 0.01) {
-			if (player.CameraMode !== Enum.CameraMode.LockFirstPerson) {
-				this.tiltCharacter.update(tiltAngle);
-			}
+			if (this.player.CameraMode !== Enum.CameraMode.LockFirstPerson) this.tiltCharacter.update(tiltAngle);
 			Events.UpdateCharacterTilt.fire(tiltAngle);
-
 			this.prevTiltAngle = tiltAngle;
 		}
 	}
 
 	private onDied(): void {
 		print("Died");
-
 		this.isAlive = false;
-
 		this.janitor.Cleanup();
 	}
 }

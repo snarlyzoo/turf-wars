@@ -4,20 +4,19 @@ import { ContextActionService, Players } from "@rbxts/services";
 import { TWCharacterComponent } from "client/components/characters";
 import { ToolType } from "shared/types/toolTypes";
 
-const player = Players.LocalPlayer;
-
 @Controller()
-class CharacterController implements OnStart {
+export class CharacterController implements OnStart {
+	public readonly player: Player = Players.LocalPlayer;
+
 	private twCharacter?: TWCharacterComponent;
 
 	public constructor(private components: Components) {}
 
 	public onStart(): void {
-		if (player.Character) {
-			this.onCharacterAdded(player.Character);
-		}
-		player.CharacterAdded.Connect((character) => this.onCharacterAdded(character));
-		player.CharacterRemoving.Connect((character) => this.onCharacterRemoving(character));
+		if (this.player.Character) this.onCharacterAdded(this.player.Character);
+
+		this.player.CharacterAdded.Connect((character) => this.onCharacterAdded(character));
+		this.player.CharacterRemoving.Connect((character) => this.onCharacterRemoving(character));
 
 		this.bindInputActions();
 	}
@@ -77,18 +76,11 @@ class CharacterController implements OnStart {
 		const tool = this.twCharacter.getCurrentTool();
 		if (!tool) return;
 
-		if (inputState === Enum.UserInputState.Begin) {
-			if (actionName === "PrimaryToolAction") {
-				tool.usePrimaryAction(true);
-			} else {
-				tool.useSecondaryAction(true);
-			}
-		} else if (inputState === Enum.UserInputState.End) {
-			if (actionName === "PrimaryToolAction") {
-				tool.usePrimaryAction(false);
-			} else {
-				tool.useSecondaryAction(false);
-			}
+		const toActivate = inputState === Enum.UserInputState.Begin;
+		if (actionName === "PrimaryToolAction") {
+			tool.usePrimaryAction(toActivate);
+		} else {
+			tool.useSecondaryAction(toActivate);
 		}
 	}
 }
