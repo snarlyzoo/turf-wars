@@ -1,4 +1,4 @@
-export interface Projectile {
+export type Projectile = {
 	position: Vector3;
 	velocity: Vector3;
 	acceleration: Vector3;
@@ -14,9 +14,14 @@ export interface Projectile {
 	timestamp?: number;
 
 	onImpact?: BindableEvent;
+};
+
+export const enum ProjectileHitType {
+	Block,
+	Character,
 }
 
-export interface ProjectileModifier {
+export type ProjectileModifier = {
 	speed?: number;
 	gravity?: number;
 
@@ -28,4 +33,10 @@ export interface ProjectileModifier {
 	timestamp?: number;
 
 	onImpact?: BindableEvent;
-}
+};
+
+export type ProjectileRecord = {
+	origin: Vector3;
+	direction: Vector3;
+	speed: number;
+};

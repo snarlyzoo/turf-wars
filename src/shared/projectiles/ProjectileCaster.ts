@@ -16,15 +16,24 @@ export abstract class ProjectileCaster {
 		this.createFolders();
 		this.createActors();
 
-		RunService.PostSimulation.Wait();
+		task.defer(() => {
+			const initializedActors: Actor[] = [];
+			for (let i = 0; i < this.THREAD_COUNT; i++) {
+				const actor = this.actorQueue.dequeue();
+				if (!actor) {
+					warn("No available actors to initialize");
+					break;
+				}
 
-		for (let i = 0; i < this.actorQueue.size(); i++) {
-			const actor = this.actorQueue.dequeue()!;
-			actor.SendMessage("Initialize", this.projectileFolder);
-			this.actorQueue.enqueue(actor);
-		}
+				actor.SendMessage("Initialize", this.projectileFolder);
+				initializedActors.push(actor);
+			}
+			for (const actor of initializedActors) {
+				this.actorQueue.enqueue(actor);
+			}
 
-		print("Projectile caster initialized");
+			print("Projectile caster initialized.");
+		});
 	}
 
 	public static castProjectile(

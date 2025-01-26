@@ -1,7 +1,6 @@
 import { BaseComponent, Component } from "@flamework/components";
 import { Flamework, OnStart } from "@flamework/core";
-import { Players } from "@rbxts/services";
-import { Events } from "server/network";
+import { ProjectileRecord } from "shared/projectiles";
 import { HumanoidCharacterInstance, R15CharacterInstance, R6CharacterInstance } from "shared/types/characterTypes";
 import { ToolInstance, ToolType } from "shared/types/toolTypes";
 import { findFirstChildWithTag } from "shared/utility";
@@ -18,7 +17,29 @@ export class TWPlayerComponent extends BaseComponent<{}, Player> implements OnSt
 		this._isAlive = value;
 	}
 
+	public get combatEnabled(): boolean {
+		return this._combatEnabled;
+	}
+	public set combatEnabled(value: boolean) {
+		this._combatEnabled = value;
+	}
+
+	public get lastFireProjectileTick(): number {
+		return this._lastFireProjectileTick;
+	}
+	public set lastFireProjectileTick(value: number) {
+		this._lastFireProjectileTick = value;
+	}
+
+	public get projectileRecords(): Map<number, ProjectileRecord> {
+		return this._projectileRecords;
+	}
+
 	private _isAlive: boolean = false;
+	private _combatEnabled: boolean = false;
+
+	private _lastFireProjectileTick: number = 0;
+	private _projectileRecords: Map<number, ProjectileRecord> = new Map();
 
 	private backpack?: Backpack;
 	private character?: HumanoidCharacterInstance;
@@ -33,69 +54,27 @@ export class TWPlayerComponent extends BaseComponent<{}, Player> implements OnSt
 		this.instance.CharacterAppearanceLoaded.Connect(() => this.onCharacterAppearanceLoaded());
 	}
 
-	public tiltCharacter(angle: number): void {
-		if (!this.isAlive) {
-			warn(`${this.instance.Name} is not alive`);
-			return;
-		}
-
-		if (!this.character) {
-			warn(`${this.instance.Name} does not have a character`);
-			return;
-		}
-
-		Events.CharacterTiltChanged.fire(this.getOtherPlayers(), this.character, angle);
+	public getBackpack(): Backpack | undefined {
+		return this.backpack;
 	}
 
-	public equipTool(toolType: ToolType): void {
-		if (!this.isAlive) {
-			warn(`${this.instance.Name} is not alive`);
-			return;
-		}
+	public getCharacter(): HumanoidCharacterInstance | undefined {
+		return this.character;
+	}
 
-		if (!this.character || !this.toolJoint) {
-			warn(`${this.instance.Name} does not have a character or tool joint`);
-			return;
-		}
+	public getToolJoint(): Motor6D | undefined {
+		return this.toolJoint;
+	}
 
-		const tool = this.tools[toolType];
-		if (!tool) {
-			warn(`${this.instance.Name} does not have a valid ${toolType}`);
-			return;
-		}
+	public getTool(toolType: ToolType): ToolInstance | undefined {
+		return this.tools[toolType];
+	}
 
-		if (this.curTool) this.curTool.Parent = this.backpack;
-
+	public getCurrentTool(): ToolInstance | undefined {
+		return this.curTool;
+	}
+	public setCurrentTool(tool?: ToolInstance): void {
 		this.curTool = tool;
-		this.toolJoint.Part1 = this.curTool.PrimaryPart;
-		this.curTool.Parent = this.character;
-
-		Events.CharacterTiltChanged.fire(this.getOtherPlayers(), this.character);
-	}
-
-	public unequip(): void {
-		if (!this.curTool) {
-			return;
-		}
-
-		if (!this.character || !this.toolJoint) {
-			warn(`${this.instance.Name} does not have a character or tool joint`);
-			return;
-		}
-
-		this.curTool.Parent = this.backpack;
-		this.toolJoint.Part1 = undefined;
-		this.curTool = undefined;
-
-		Events.CharacterTiltChanged.fire(this.getOtherPlayers(), this.character);
-	}
-
-	public fireProjectile(origin: Vector3, direction: Vector3, speed: number, timestamp: number): void {
-		print(`${this.instance.Name} fired a projectile`);
-	}
-
-	private getOtherPlayers(): Player[] {
-		return Players.GetPlayers().filter((player) => player !== this.instance);
 	}
 
 	private onCharacterAdded(character: Model): void {
@@ -121,6 +100,7 @@ export class TWPlayerComponent extends BaseComponent<{}, Player> implements OnSt
 		this.toolJoint.Parent = this.toolJoint.Part0;
 
 		this.isAlive = true;
+		this.combatEnabled = true;
 
 		const hammer = findFirstChildWithTag(this.backpack, ToolType.Hammer);
 		const slingshot = findFirstChildWithTag(this.backpack, ToolType.Slingshot);
@@ -154,6 +134,7 @@ export class TWPlayerComponent extends BaseComponent<{}, Player> implements OnSt
 
 	private onDied(): void {
 		this.isAlive = false;
+		this.combatEnabled = false;
 		this.tools = {};
 	}
 }

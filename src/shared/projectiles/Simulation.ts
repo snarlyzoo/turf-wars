@@ -98,7 +98,7 @@ export class Simulation {
 
 	private handleImpacts(impacted: Map<Projectile, RaycastResult>): void {
 		for (const [projectile, raycastResult] of impacted) {
-			if (projectile.onImpact) projectile.onImpact.Fire(raycastResult);
+			if (projectile.onImpact) projectile.onImpact.Fire(projectile, raycastResult);
 		}
 	}
 
@@ -114,7 +114,7 @@ export class Simulation {
 	}
 
 	private onPostSimulation(deltaTime: number): void {
-		debug.profilebegin("Projectile Simulation");
+		debug.profilebegin("ProjectileCaster onPostSimulation");
 
 		const startTick = os.clock();
 		const maxSimTime = (deltaTime - (startTick - this.frameStartTick)) * this.MAX_SIMULATION_TIME_FACTOR;
@@ -138,6 +138,8 @@ export class Simulation {
 	}
 
 	private onPreRender(): void {
+		debug.profilebegin("ProjectileCaster onPreRender");
+
 		const parts: Array<BasePart> = [];
 		const cframes: Array<CFrame> = [];
 		for (let i = 0; i < this.queue.size(); i++) {
@@ -156,6 +158,8 @@ export class Simulation {
 
 			this.queue.enqueue(projectile);
 		}
+
+		debug.profileend();
 
 		task.synchronize();
 
