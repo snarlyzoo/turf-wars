@@ -1,3 +1,5 @@
+import { ProjectileConfig } from "./projectileTypes";
+
 export const enum ToolType {
 	Hammer = "Hammer",
 	Slingshot = "Slingshot",
@@ -12,10 +14,18 @@ export interface ToolInstance extends Model {
 		Viewmodel: AnimationFolder;
 	};
 	Handle: BasePart;
-	Configuration: Configuration;
+	Configuration?: Configuration;
 }
 
 export interface ToolAnimations {
 	Idle: Animation;
 	Equip: Animation;
 }
+
+export type SlingshotConfig = {
+	drawSpeed: number;
+
+	projectile: ProjectileConfig;
+
+	rateOfFire: number;
+};

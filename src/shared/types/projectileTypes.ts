@@ -39,4 +39,21 @@ export type ProjectileRecord = {
 	origin: Vector3;
 	direction: Vector3;
 	speed: number;
+	config: ProjectileConfig;
+};
+
+export type ProjectileConfig = {
+	startSpeed: number;
+	maxSpeed: number;
+
+	gravity: number;
+
+	lifetime: number;
+
+	damage: {
+		baseDamage: number;
+		speedMultiplier: number;
+	};
+
+	pvInstance?: PVInstance;
 };

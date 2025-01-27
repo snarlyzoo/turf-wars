@@ -1,8 +1,8 @@
 //!native
 import { RunService, Workspace } from "@rbxts/services";
 import { Queue } from "shared/classes/Queue";
+import { Projectile, ProjectileModifier } from "shared/types/projectileTypes";
 import { calculatePosition, calculateVelocity } from "shared/utility/physics";
-import { Projectile, ProjectileModifier } from "./projectileTypes";
 
 export class Simulation {
 	private readonly MAX_SIMULATION_TIME_FACTOR: number = 0.5;

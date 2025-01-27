@@ -1,7 +1,7 @@
 import { Networking } from "@flamework/networking";
 import { HumanoidCharacterInstance } from "shared/types/characterTypes";
+import { ProjectileHitType, ProjectileRecord } from "shared/types/projectileTypes";
 import { ToolType } from "shared/types/toolTypes";
-import { ProjectileHitType, ProjectileRecord } from "shared/projectiles";
 
 interface ClientToServerEvents {
 	UpdateCharacterTilt: Networking.Unreliable<(angle: number) => void>;

@@ -1,17 +1,12 @@
 import { Component } from "@flamework/components";
-import { Players, ReplicatedStorage, Workspace } from "@rbxts/services";
+import { Players, Workspace } from "@rbxts/services";
 import { TWCharacterComponent, ViewmodelComponent } from "client/components/characters";
 import { Events } from "client/network";
-import { Projectile, ProjectileCaster, ProjectileHitType, ProjectileModifier } from "shared/projectiles";
+import { ProjectileCaster } from "shared/modules";
+import { Projectile, ProjectileHitType, ProjectileModifier } from "shared/types/projectileTypes";
+import { SlingshotConfig } from "shared/types/toolTypes";
+import { getSlingshotConfig } from "shared/utility/configs";
 import { ToolComponent } from "./ToolComponent";
-
-const START_SPEED = 25;
-const MAX_SPEED = 100;
-const DRAW_SPEED = 35;
-
-const RPM = 400;
-
-const PROJECTILE_MODEL = ReplicatedStorage.FindFirstChild("Effects")?.FindFirstChild("Projectile") as Part;
 
 @Component()
 export class SlingshotComponent extends ToolComponent {
@@ -21,6 +16,8 @@ export class SlingshotComponent extends ToolComponent {
 
 	private teamColor!: BrickColor;
 
+	private config!: SlingshotConfig;
+
 	private projectileImpactEvent = new Instance("BindableEvent");
 
 	public override initialize(character: TWCharacterComponent, viewmodel: ViewmodelComponent): void {
@@ -29,6 +26,8 @@ export class SlingshotComponent extends ToolComponent {
 		this.mouseIcon = "rbxassetid://textures/GunCursor.png";
 
 		this.fetchTeamColor();
+
+		this.config = getSlingshotConfig(this.instance.Configuration);
 
 		this.projectileImpactEvent.Event.Connect((projectile, raycastResult) =>
 			this.onProjectileImpact(projectile, raycastResult),
@@ -45,10 +44,10 @@ export class SlingshotComponent extends ToolComponent {
 
 		this.isActive = true;
 
-		let speed = START_SPEED;
+		let speed = this.config.projectile.startSpeed;
 		const tick = os.clock();
 		while (this.equipped && this.toFire && this.twCharacter.combatEnabled) task.wait();
-		speed = math.min(speed + DRAW_SPEED * (os.clock() - tick), MAX_SPEED);
+		speed = math.min(speed + this.config.drawSpeed * (os.clock() - tick), this.config.projectile.maxSpeed);
 
 		if (this.equipped && this.twCharacter.combatEnabled) {
 			const camCFrame = this.twCharacter.camera.CFrame;
@@ -62,7 +61,7 @@ export class SlingshotComponent extends ToolComponent {
 
 			const projectileModifier: ProjectileModifier = {
 				speed: speed,
-				pvInstance: PROJECTILE_MODEL,
+				pvInstance: this.config.projectile.pvInstance,
 				color: this.teamColor.Color,
 				timestamp: timestamp,
 				onImpact: this.projectileImpactEvent,
@@ -74,7 +73,7 @@ export class SlingshotComponent extends ToolComponent {
 				projectileModifier,
 			);
 
-			task.wait(60 / RPM);
+			task.wait(60 / this.config.rateOfFire);
 		}
 
 		this.isActive = false;
@@ -106,7 +105,6 @@ export class SlingshotComponent extends ToolComponent {
 		if (hitParent === this.Blocks) {
 			if (hitPart.BrickColor === this.teamColor) return;
 
-			print("Projectile hit block");
 			projectileHitType = ProjectileHitType.Block;
 		} else {
 			const humanoid = hitParent.FindFirstChildOfClass("Humanoid");
@@ -115,9 +113,14 @@ export class SlingshotComponent extends ToolComponent {
 			const player = Players.GetPlayerFromCharacter(hitParent);
 			if (player && player.Team === this.twCharacter.player.Team) return;
 
-			print(`Projectile hit ${hitParent.Name}`);
 			projectileHitType = ProjectileHitType.Character;
 		}
+
+		const damage =
+			this.config.projectile.damage.baseDamage +
+			this.config.projectile.damage.speedMultiplier * projectile.velocity.Magnitude;
+		print(`Projectile hit ${hitParent.Name} for ${math.round(damage)} damage`);
+
 		Events.RegisterProjectileHit.fire(projectileHitType, hitPart, Workspace.GetServerTimeNow(), firedTimestamp);
 	}
 }

@@ -1,6 +1,6 @@
-import { ReplicatedFirst, RunService, Workspace } from "@rbxts/services";
+import { ReplicatedFirst, Workspace } from "@rbxts/services";
 import { PriorityQueue } from "shared/classes/Queue";
-import { ProjectileModifier } from "./projectileTypes";
+import { ProjectileModifier } from "shared/types/projectileTypes";
 
 export abstract class ProjectileCaster {
 	private static readonly THREAD_COUNT: number = 8;

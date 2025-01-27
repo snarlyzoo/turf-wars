@@ -3,27 +3,20 @@ import { Players, Workspace } from "@rbxts/services";
 import { TWPlayerComponent } from "server/components";
 import { Events } from "server/network";
 import { PlayerRegistry } from "server/services/PlayerRegistry";
-import { ProjectileHitType, ProjectileRecord } from "shared/projectiles";
-import { calculatePosition } from "shared/utility/physics";
+import { ProjectileHitType, ProjectileRecord } from "shared/types/projectileTypes";
+import { ToolType } from "shared/types/toolTypes";
+import { calculatePosition, calculateVelocity } from "shared/utility/physics";
 
 @Service()
 export class SlingshotActionService {
 	private readonly MAX_PING_ERROR: number = 0.05;
 	private readonly MAX_ORIGIN_ERROR: number = 4;
 
-	private readonly MAX_PROJECTILE_SPEED: number = 100;
-	private readonly PROJECTILE_GRAVITY: number = 40;
-	private readonly PROJECTILE_LIFETIME: number = 5;
-
-	private readonly SLINGSHOT_RPM: number = 400;
-	private readonly SLINGSHOT_BASE_DAMAGE: number = 50;
-	private readonly SLINGSHOT_DAMAGE_MULTIPLIER: number = 0.5;
-
 	private readonly Blocks = Workspace.FindFirstChild("Blocks") as Folder;
 
 	public constructor(private playerRegistry: PlayerRegistry) {}
 
-	public handleProjectileFire(
+	public handleFireProjectile(
 		twPlayer: TWPlayerComponent,
 		origin: Vector3,
 		direction: Vector3,
@@ -41,14 +34,17 @@ export class SlingshotActionService {
 		}
 
 		const character = twPlayer.getCharacter();
-		if (!character) {
-			warn(`${twPlayer.instance.Name} does not have a character`);
-			return;
-		}
+		if (!character) return;
 
 		const tool = twPlayer.getCurrentTool();
 		if (!tool || !tool.HasTag("Slingshot")) {
 			warn(`${twPlayer.instance.Name} does not have a slingshot equipped`);
+			return;
+		}
+
+		const config = twPlayer.getToolConfig(ToolType.Slingshot);
+		if (!config) {
+			warn(`${twPlayer.instance.Name} does not have a slingshot config`);
 			return;
 		}
 
@@ -64,7 +60,7 @@ export class SlingshotActionService {
 		}
 		direction = direction.Unit;
 
-		if (speed <= 0 || speed > this.MAX_PROJECTILE_SPEED) {
+		if (speed <= 0 || speed > config.projectile.maxSpeed) {
 			this.playerRegistry.kickPlayer(twPlayer.instance, "firing a projectile with an invalid speed");
 			return;
 		}
@@ -79,7 +75,7 @@ export class SlingshotActionService {
 		}
 
 		const tick = os.clock();
-		if (tick - twPlayer.lastFireProjectileTick < 60 / this.SLINGSHOT_RPM - this.MAX_PING_ERROR) {
+		if (tick - twPlayer.lastFireProjectileTick < 60 / config.rateOfFire - this.MAX_PING_ERROR) {
 			this.playerRegistry.addKickOffense(twPlayer.instance, "firing a projectile too quickly");
 			return;
 		}
@@ -88,16 +84,17 @@ export class SlingshotActionService {
 			origin: origin,
 			direction: direction,
 			speed: speed,
+			config: config.projectile,
 		};
 		twPlayer.projectileRecords.set(timestamp, projectileRecord);
-		task.delay(this.PROJECTILE_LIFETIME, () => twPlayer.projectileRecords.delete(timestamp));
+		task.delay(config.projectile.lifetime, () => twPlayer.projectileRecords.delete(timestamp));
 
 		Events.ProjectileFired.except(twPlayer.instance, twPlayer.instance, projectileRecord);
 
 		twPlayer.lastFireProjectileTick = tick;
 	}
 
-	public registerProjectileHit(
+	public handleRegisterProjectileHit(
 		twPlayer: TWPlayerComponent,
 		hitType: ProjectileHitType,
 		hitPart: BasePart,
@@ -118,24 +115,23 @@ export class SlingshotActionService {
 			return;
 		}
 
-		const dt = hitTimestamp - firedTimestamp;
-		if (dt < 0 || dt > this.PROJECTILE_LIFETIME + this.MAX_PING_ERROR) {
-			warn(`${twPlayer.instance.Name} registered a projectile hit with an invalid timestamp difference`);
-			return;
-		}
-
 		const projectileRecord = twPlayer.projectileRecords.get(firedTimestamp);
 		if (!projectileRecord) {
 			warn(`${twPlayer.instance.Name} registered a projectile hit for an invalid projectile`);
 			return;
 		}
+		const config = projectileRecord.config;
 
-		const position = calculatePosition(
-			projectileRecord.origin,
-			projectileRecord.direction.mul(projectileRecord.speed),
-			new Vector3(0, -this.PROJECTILE_GRAVITY, 0),
-			dt,
-		);
+		const dt = hitTimestamp - firedTimestamp;
+		if (dt < 0 || dt > config.lifetime + this.MAX_PING_ERROR) {
+			warn(`${twPlayer.instance.Name} registered a projectile hit with an invalid timestamp difference`);
+			return;
+		}
+
+		const velocity = projectileRecord.direction.mul(projectileRecord.speed);
+		const acceleration = new Vector3(0, -config.gravity, 0);
+		const position = calculatePosition(projectileRecord.origin, velocity, acceleration, dt);
+
 		const maxPositionError = 0.5 * math.max(hitPart.Size.X, hitPart.Size.Y, hitPart.Size.Z) + this.MAX_ORIGIN_ERROR;
 		if (position.sub(hitPart.Position).Magnitude > maxPositionError) {
 			warn(`${twPlayer.instance.Name} registered a projectile hit with an invalid position`);
@@ -148,7 +144,9 @@ export class SlingshotActionService {
 			return;
 		}
 
-		const damage = this.SLINGSHOT_BASE_DAMAGE + this.SLINGSHOT_DAMAGE_MULTIPLIER * projectileRecord.speed;
+		const damage =
+			config.damage.baseDamage +
+			config.damage.speedMultiplier * calculateVelocity(velocity, acceleration, dt).Magnitude;
 		if (hitType === ProjectileHitType.Block) {
 			if (hitParent !== this.Blocks) {
 				warn(`${twPlayer.instance.Name} registered a block projectile hit on a non-block part`);
@@ -174,7 +172,7 @@ export class SlingshotActionService {
 
 			humanoid.TakeDamage(damage);
 
-			print(`${twPlayer.instance.Name} hit ${hitParent.Name} for ${math.round(damage)} damage`);
+			print(`${twPlayer.instance.Name}'s projectile hit ${hitParent.Name} for ${math.round(damage)} damage`);
 
 			if (humanoid.Health <= 0) {
 				print(`${twPlayer.instance.Name} killed ${hitParent.Name}`);

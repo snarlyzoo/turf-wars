@@ -1,9 +1,15 @@
 import { BaseComponent, Component } from "@flamework/components";
 import { Flamework, OnStart } from "@flamework/core";
-import { ProjectileRecord } from "shared/projectiles";
 import { HumanoidCharacterInstance, R15CharacterInstance, R6CharacterInstance } from "shared/types/characterTypes";
-import { ToolInstance, ToolType } from "shared/types/toolTypes";
+import { ProjectileRecord } from "shared/types/projectileTypes";
+import { SlingshotConfig, ToolInstance, ToolType } from "shared/types/toolTypes";
 import { findFirstChildWithTag } from "shared/utility";
+import { getSlingshotConfig } from "shared/utility/configs";
+
+type ToolConfigMap = {
+	[ToolType.Slingshot]: SlingshotConfig;
+	[ToolType.Hammer]: undefined;
+};
 
 @Component()
 export class TWPlayerComponent extends BaseComponent<{}, Player> implements OnStart {
@@ -46,6 +52,7 @@ export class TWPlayerComponent extends BaseComponent<{}, Player> implements OnSt
 	private toolJoint?: Motor6D;
 
 	private tools: Partial<Record<ToolType, ToolInstance>> = {};
+	private toolConfigs: Partial<ToolConfigMap> = {};
 	private curTool?: ToolInstance;
 
 	public onStart(): void {
@@ -55,19 +62,40 @@ export class TWPlayerComponent extends BaseComponent<{}, Player> implements OnSt
 	}
 
 	public getBackpack(): Backpack | undefined {
+		if (!this.backpack) {
+			warn(`${this.instance.Name} does not have a backpack`);
+		}
 		return this.backpack;
 	}
 
 	public getCharacter(): HumanoidCharacterInstance | undefined {
+		if (!this.character) {
+			warn(`${this.instance.Name} does not have a character`);
+		}
 		return this.character;
 	}
 
 	public getToolJoint(): Motor6D | undefined {
+		if (!this.toolJoint) {
+			warn(`${this.instance.Name} does not have a tool joint`);
+		}
 		return this.toolJoint;
 	}
 
 	public getTool(toolType: ToolType): ToolInstance | undefined {
-		return this.tools[toolType];
+		const tool = this.tools[toolType];
+		if (!tool) {
+			warn(`${this.instance.Name} does not have a ${toolType}`);
+		}
+		return tool;
+	}
+
+	public getToolConfig<T extends ToolType>(toolType: T): ToolConfigMap[T] | undefined {
+		const config = this.toolConfigs[toolType];
+		if (!config) {
+			warn(`${this.instance.Name} does not have a ${toolType} config`);
+		}
+		return config;
 	}
 
 	public getCurrentTool(): ToolInstance | undefined {
@@ -110,6 +138,8 @@ export class TWPlayerComponent extends BaseComponent<{}, Player> implements OnSt
 		}
 		this.tools[ToolType.Hammer] = hammer;
 		this.tools[ToolType.Slingshot] = slingshot;
+
+		this.toolConfigs[ToolType.Slingshot] = getSlingshotConfig(slingshot.Configuration);
 	}
 
 	private onCharacterRemoving(): void {
@@ -135,6 +165,8 @@ export class TWPlayerComponent extends BaseComponent<{}, Player> implements OnSt
 	private onDied(): void {
 		this.isAlive = false;
 		this.combatEnabled = false;
+
 		this.tools = {};
+		this.toolConfigs = {};
 	}
 }

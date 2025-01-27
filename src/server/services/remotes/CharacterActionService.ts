@@ -5,44 +5,32 @@ import { ToolType } from "shared/types/toolTypes";
 
 @Service()
 export class CharacterActionService {
-	public updateCharacterTilt(twPlayer: TWPlayerComponent, angle: number): void {
+	public handleUpdateCharacterTilt(twPlayer: TWPlayerComponent, angle: number): void {
 		if (!twPlayer.isAlive) {
 			warn(`${twPlayer.instance.Name} is not alive`);
 			return;
 		}
 
 		const character = twPlayer.getCharacter();
-		if (!character) {
-			warn(`${twPlayer.instance.Name} does not have a character`);
-			return;
-		}
+		if (!character) return;
 
 		Events.CharacterTiltChanged.except(twPlayer.instance, character, angle);
 	}
 
-	public handleToolEquip(twPlayer: TWPlayerComponent, toolType: ToolType): void {
+	public handleEquipTool(twPlayer: TWPlayerComponent, toolType: ToolType): void {
 		if (!twPlayer.isAlive) {
 			warn(`${twPlayer.instance.Name} is not alive`);
 			return;
 		}
 
 		const character = twPlayer.getCharacter();
-		if (!character) {
-			warn(`${twPlayer.instance.Name} does not have a character`);
-			return;
-		}
+		if (!character) return;
 
 		const toolJoint = twPlayer.getToolJoint();
-		if (!toolJoint) {
-			warn(`${twPlayer.instance.Name} does not have a tool joint`);
-			return;
-		}
+		if (!toolJoint) return;
 
 		const tool = twPlayer.getTool(toolType);
-		if (!tool) {
-			warn(`${twPlayer.instance.Name} does not have a ${toolType}`);
-			return;
-		}
+		if (!tool) return;
 
 		const curTool = twPlayer.getCurrentTool();
 		if (curTool) {
@@ -57,7 +45,7 @@ export class CharacterActionService {
 		Events.CharacterTiltChanged.except(twPlayer.instance, character);
 	}
 
-	public handleCurrentToolUnequip(twPlayer: TWPlayerComponent): void {
+	public handleUnequipCurrentTool(twPlayer: TWPlayerComponent): void {
 		const tool = twPlayer.getCurrentTool();
 		if (!tool) {
 			warn(`${twPlayer.instance.Name} does not have a tool equipped`);
@@ -65,16 +53,10 @@ export class CharacterActionService {
 		}
 
 		const character = twPlayer.getCharacter();
-		if (!character) {
-			warn(`${twPlayer.instance.Name} does not have a character`);
-			return;
-		}
+		if (!character) return;
 
 		const toolJoint = twPlayer.getToolJoint();
-		if (!toolJoint) {
-			warn(`${twPlayer.instance.Name} does not have a tool joint`);
-			return;
-		}
+		if (!toolJoint) return;
 
 		tool.Parent = twPlayer.getBackpack();
 		toolJoint.Part1 = undefined;

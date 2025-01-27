@@ -1,5 +1,5 @@
 import { Flamework } from "@flamework/core";
-import { ProjectileCaster } from "shared/projectiles";
+import { ProjectileCaster } from "shared/modules/ProjectileCaster";
 
 Flamework.addPaths("src/client/components");
 Flamework.addPaths("src/client/controllers");
