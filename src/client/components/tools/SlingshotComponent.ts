@@ -5,7 +5,7 @@ import { Events } from "client/network";
 import { ProjectileCaster } from "shared/modules";
 import { Projectile, ProjectileHitType, ProjectileModifier } from "shared/types/projectileTypes";
 import { SlingshotConfig } from "shared/types/toolTypes";
-import { getSlingshotConfig } from "shared/utility/configs";
+import { getSlingshotConfig } from "shared/utility/getConfig";
 import { ToolComponent } from "./ToolComponent";
 
 @Component()

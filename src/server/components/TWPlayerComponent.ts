@@ -4,7 +4,7 @@ import { HumanoidCharacterInstance, R15CharacterInstance, R6CharacterInstance } 
 import { ProjectileRecord } from "shared/types/projectileTypes";
 import { SlingshotConfig, ToolInstance, ToolType } from "shared/types/toolTypes";
 import { findFirstChildWithTag } from "shared/utility";
-import { getSlingshotConfig } from "shared/utility/configs";
+import { getSlingshotConfig } from "shared/utility/getConfig";
 
 type ToolConfigMap = {
 	[ToolType.Slingshot]: SlingshotConfig;
