@@ -2,7 +2,7 @@ import { Service } from "@flamework/core";
 import { Players, Workspace } from "@rbxts/services";
 import { TWPlayerComponent } from "server/components";
 import { Events } from "server/network";
-import { PlayerRegistry } from "server/services/PlayerRegistry";
+import { PlayerRegistry } from "server/services";
 import { ProjectileHitType, ProjectileRecord } from "shared/types/projectileTypes";
 import { ToolType } from "shared/types/toolTypes";
 import { Physics } from "shared/utility";

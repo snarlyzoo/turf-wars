@@ -1,7 +1,7 @@
 import { OnStart, Service } from "@flamework/core";
 import { TWPlayerComponent } from "server/components";
 import { Events } from "server/network";
-import { PlayerRegistry } from "server/services/PlayerRegistry";
+import { PlayerRegistry } from "server/services";
 import { CharacterActionService, SlingshotActionService } from ".";
 
 @Service()

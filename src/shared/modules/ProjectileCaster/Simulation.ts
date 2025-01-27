@@ -1,6 +1,6 @@
 //!native
 import { RunService, Workspace } from "@rbxts/services";
-import { Queue } from "shared/classes/Queue";
+import { Queue } from "shared/classes/queues";
 import { Projectile, ProjectileModifier } from "shared/types/projectileTypes";
 import { Physics } from "shared/utility";
 

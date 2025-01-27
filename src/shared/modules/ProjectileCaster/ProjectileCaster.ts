@@ -1,5 +1,5 @@
 import { ReplicatedFirst, Workspace } from "@rbxts/services";
-import { PriorityQueue } from "shared/classes/Queue";
+import { PriorityQueue } from "shared/classes/queues";
 import { ProjectileModifier } from "shared/types/projectileTypes";
 
 export abstract class ProjectileCaster {
