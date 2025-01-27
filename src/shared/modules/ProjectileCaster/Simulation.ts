@@ -2,7 +2,7 @@
 import { RunService, Workspace } from "@rbxts/services";
 import { Queue } from "shared/classes/Queue";
 import { Projectile, ProjectileModifier } from "shared/types/projectileTypes";
-import { calculatePosition, calculateVelocity } from "shared/utility/physics";
+import { Physics } from "shared/utility";
 
 export class Simulation {
 	private readonly MAX_SIMULATION_TIME_FACTOR: number = 0.5;
@@ -75,7 +75,7 @@ export class Simulation {
 		const tick = os.clock();
 		const dt = tick - projectile.lastTick;
 		const curPosition = projectile.position;
-		const nextPosition = calculatePosition(curPosition, projectile.velocity, projectile.acceleration, dt);
+		const nextPosition = Physics.calculatePosition(curPosition, projectile.velocity, projectile.acceleration, dt);
 
 		const raycastResult = Workspace.Raycast(curPosition, nextPosition.sub(curPosition), projectile.raycastParams);
 		if (raycastResult) {
@@ -90,7 +90,7 @@ export class Simulation {
 		}
 
 		projectile.position = nextPosition;
-		projectile.velocity = calculateVelocity(projectile.velocity, projectile.acceleration, dt);
+		projectile.velocity = Physics.calculateVelocity(projectile.velocity, projectile.acceleration, dt);
 		projectile.lastTick = tick;
 
 		this.queue.enqueue(projectile);

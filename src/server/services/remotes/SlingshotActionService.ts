@@ -5,7 +5,7 @@ import { Events } from "server/network";
 import { PlayerRegistry } from "server/services/PlayerRegistry";
 import { ProjectileHitType, ProjectileRecord } from "shared/types/projectileTypes";
 import { ToolType } from "shared/types/toolTypes";
-import { calculatePosition, calculateVelocity } from "shared/utility/physics";
+import { Physics } from "shared/utility";
 
 @Service()
 export class SlingshotActionService {
@@ -130,7 +130,7 @@ export class SlingshotActionService {
 
 		const velocity = projectileRecord.direction.mul(projectileRecord.speed);
 		const acceleration = new Vector3(0, -config.gravity, 0);
-		const position = calculatePosition(projectileRecord.origin, velocity, acceleration, dt);
+		const position = Physics.calculatePosition(projectileRecord.origin, velocity, acceleration, dt);
 
 		const maxPositionError = 0.5 * math.max(hitPart.Size.X, hitPart.Size.Y, hitPart.Size.Z) + this.MAX_ORIGIN_ERROR;
 		if (position.sub(hitPart.Position).Magnitude > maxPositionError) {
@@ -146,7 +146,7 @@ export class SlingshotActionService {
 
 		const damage =
 			config.damage.baseDamage +
-			config.damage.speedMultiplier * calculateVelocity(velocity, acceleration, dt).Magnitude;
+			config.damage.speedMultiplier * Physics.calculateVelocity(velocity, acceleration, dt).Magnitude;
 		if (hitType === ProjectileHitType.Block) {
 			if (hitParent !== this.Blocks) {
 				warn(`${twPlayer.instance.Name} registered a block projectile hit on a non-block part`);
