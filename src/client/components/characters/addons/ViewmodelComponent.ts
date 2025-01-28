@@ -79,7 +79,7 @@ export class ViewmodelComponent extends BaseComponent<{}, HumanoidCharacterInsta
 		viewmodel.Humanoid.EvaluateStateMachine = false;
 		viewmodel.Humanoid.RequiresNeck = false;
 
-		for (const descendant of viewmodel.GetDescendants()) {
+		viewmodel.GetDescendants().forEach((descendant) => {
 			if (!(descendant.Name in this.VALID_DESCENDANTS)) {
 				descendant.Destroy();
 			} else if (descendant.IsA("BasePart")) {
@@ -87,7 +87,7 @@ export class ViewmodelComponent extends BaseComponent<{}, HumanoidCharacterInsta
 				descendant.CollisionGroup = this.COLLISION_GROUP;
 				descendant.Massless = true;
 			}
-		}
+		});
 
 		viewmodel.Torso.Transparency = 1;
 

@@ -1,27 +1,31 @@
 import { Components } from "@flamework/components";
 import { Controller, OnStart } from "@flamework/core";
 import { ContextActionService, Players } from "@rbxts/services";
-import { TWCharacterComponent } from "client/components/characters";
+import { CharacterComponent, GameCharacterComponent, LobbyCharacterComponent } from "client/components/characters";
+import { Events } from "client/network";
+import { CharacterType } from "shared/types/characterTypes";
 import { ToolType } from "shared/types/toolTypes";
 
 @Controller()
 export class CharacterController implements OnStart {
 	public readonly player: Player = Players.LocalPlayer;
 
-	private twCharacter?: TWCharacterComponent;
+	private combatEnabled: boolean = false;
+
+	private characterComponent?: CharacterComponent;
 
 	public constructor(private components: Components) {}
 
 	public onStart(): void {
-		if (this.player.Character) this.onCharacterAdded(this.player.Character);
+		Events.ConstructCharacterComponent.connect((characterType) =>
+			this.onConstructCharacterComponent(characterType),
+		);
+		Events.SetCombatEnabled.connect((enabled) => this.onSetCombatEnabled(enabled));
 
-		this.player.CharacterAdded.Connect((character) => this.onCharacterAdded(character));
 		this.player.CharacterRemoving.Connect((character) => this.onCharacterRemoving(character));
-
-		this.bindInputActions();
 	}
 
-	private bindInputActions(): void {
+	private bindGameInputActions(): void {
 		ContextActionService.BindAction(
 			"EquipPrimary",
 			(actionName, inputState) => this.onEquipAction(actionName, inputState),
@@ -48,32 +52,66 @@ export class CharacterController implements OnStart {
 			Enum.UserInputType.MouseButton2,
 		);
 	}
+	private unbindGameInputActions(): void {
+		ContextActionService.UnbindAction("EquipPrimary");
+		ContextActionService.UnbindAction("EquipSecondary");
 
-	private onCharacterAdded(character: Model): void {
-		print("Constructing character component...");
+		ContextActionService.UnbindAction("PrimaryToolAction");
+		ContextActionService.UnbindAction("SecondaryToolAction");
+	}
 
-		this.twCharacter = this.components.addComponent<TWCharacterComponent>(character);
+	private onConstructCharacterComponent(characterType: CharacterType): void {
+		const character = this.player.Character;
+		if (!character) {
+			warn("Local player does not have a character.");
+			return;
+		}
 
-		print("Character component constructed.");
+		print(`Constructing ${characterType} character component...`);
+
+		let characterComponent: CharacterComponent;
+		if (characterType === CharacterType.Game) {
+			characterComponent = this.components.addComponent<GameCharacterComponent>(character);
+			(characterComponent as GameCharacterComponent).combatEnabled = this.combatEnabled;
+			this.bindGameInputActions();
+		} else {
+			characterComponent = this.components.addComponent<LobbyCharacterComponent>(character);
+		}
+		this.characterComponent = characterComponent;
+
+		print(`${characterType} character component constructed.`);
+	}
+
+	private onSetCombatEnabled(enabled: boolean): void {
+		this.combatEnabled = enabled;
+		if (this.characterComponent instanceof GameCharacterComponent)
+			this.characterComponent.combatEnabled = this.combatEnabled;
 	}
 
 	private onCharacterRemoving(character: Model): void {
-		this.components.removeComponent<TWCharacterComponent>(character);
-		this.twCharacter = undefined;
+		if (!this.characterComponent) return;
+
+		if (this.characterComponent instanceof GameCharacterComponent) {
+			this.components.removeComponent<GameCharacterComponent>(character);
+			this.unbindGameInputActions();
+		} else {
+			this.components.removeComponent<LobbyCharacterComponent>(character);
+		}
+		this.characterComponent = undefined;
 	}
 
 	private onEquipAction(actionName: string, inputState: Enum.UserInputState): void {
-		if (!this.twCharacter) return;
+		if (!(this.characterComponent instanceof GameCharacterComponent)) return;
 
 		if (inputState === Enum.UserInputState.Begin) {
-			this.twCharacter.equipTool(actionName === "EquipPrimary" ? ToolType.Slingshot : ToolType.Hammer);
+			this.characterComponent.equipTool(actionName === "EquipPrimary" ? ToolType.Slingshot : ToolType.Hammer);
 		}
 	}
 
 	private onToolAction(actionName: string, inputState: Enum.UserInputState): void {
-		if (!this.twCharacter) return;
+		if (!(this.characterComponent instanceof GameCharacterComponent)) return;
 
-		const tool = this.twCharacter.getCurrentTool();
+		const tool = this.characterComponent.getCurrentTool();
 		if (!tool) return;
 
 		const toActivate = inputState === Enum.UserInputState.Begin;

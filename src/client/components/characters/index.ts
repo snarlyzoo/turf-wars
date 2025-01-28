@@ -1,3 +1,3 @@
-export { TiltCharacterComponent } from "./TiltCharacterComponent";
-export { TWCharacterComponent } from "./TWCharacterComponent";
-export { ViewmodelComponent } from "./ViewmodelComponent";
+export { CharacterComponent } from "./CharacterComponent";
+export { GameCharacterComponent } from "./GameCharacterComponent";
+export { LobbyCharacterComponent } from "./LobbyCharacterComponent";

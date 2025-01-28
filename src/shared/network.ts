@@ -1,5 +1,5 @@
 import { Networking } from "@flamework/networking";
-import { HumanoidCharacterInstance } from "shared/types/characterTypes";
+import { CharacterType, HumanoidCharacterInstance } from "shared/types/characterTypes";
 import { ProjectileHitType, ProjectileRecord } from "shared/types/projectileTypes";
 import { ToolType } from "shared/types/toolTypes";
 
@@ -19,7 +19,11 @@ interface ClientToServerEvents {
 }
 
 interface ServerToClientEvents {
+	ConstructCharacterComponent(characterType: CharacterType): void;
+
 	CharacterTiltChanged: Networking.Unreliable<(character: HumanoidCharacterInstance, angle?: number) => void>;
+
+	SetCombatEnabled(enabled: boolean): void;
 
 	ProjectileFired: Networking.Unreliable<(caster: Player, projectileRecord: ProjectileRecord) => void>;
 }

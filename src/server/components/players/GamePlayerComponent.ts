@@ -1,8 +1,9 @@
-import { BaseComponent, Component } from "@flamework/components";
-import { Flamework, OnStart } from "@flamework/core";
-import { HumanoidCharacterInstance, R15CharacterInstance, R6CharacterInstance } from "shared/types/characterTypes";
-import { ProjectileRecord } from "shared/types/projectileTypes";
+import { Component } from "@flamework/components";
+import { PlayerComponent } from "./PlayerComponent";
+import { Flamework } from "@flamework/core";
 import { SlingshotConfig, ToolInstance, ToolType } from "shared/types/toolTypes";
+import { ProjectileRecord } from "shared/types/projectileTypes";
+import { CharacterType, R15CharacterInstance, R6CharacterInstance } from "shared/types/characterTypes";
 import { findFirstChildWithTag } from "shared/utility";
 import { getSlingshotConfig } from "shared/utility/getConfig";
 
@@ -12,16 +13,10 @@ type ToolConfigMap = {
 };
 
 @Component()
-export class TWPlayerComponent extends BaseComponent<{}, Player> implements OnStart {
-	private readonly isHumanoidCharacter = Flamework.createGuard<HumanoidCharacterInstance>();
-	private readonly isToolInstance = Flamework.createGuard<ToolInstance>();
+export class GamePlayerComponent extends PlayerComponent {
+	protected override characterType = CharacterType.Game;
 
-	public get isAlive(): boolean {
-		return this._isAlive;
-	}
-	private set isAlive(value: boolean) {
-		this._isAlive = value;
-	}
+	private readonly isToolInstance = Flamework.createGuard<ToolInstance>();
 
 	public get combatEnabled(): boolean {
 		return this._combatEnabled;
@@ -41,38 +36,20 @@ export class TWPlayerComponent extends BaseComponent<{}, Player> implements OnSt
 		return this._projectileRecords;
 	}
 
-	private _isAlive: boolean = false;
 	private _combatEnabled: boolean = false;
 
 	private _lastFireProjectileTick: number = 0;
 	private _projectileRecords: Map<number, ProjectileRecord> = new Map();
 
-	private backpack?: Backpack;
-	private character?: HumanoidCharacterInstance;
 	private toolJoint?: Motor6D;
 
 	private tools: Partial<Record<ToolType, ToolInstance>> = {};
 	private toolConfigs: Partial<ToolConfigMap> = {};
 	private curTool?: ToolInstance;
 
-	public onStart(): void {
-		this.instance.CharacterAdded.Connect((character) => this.onCharacterAdded(character));
-		this.instance.CharacterRemoving.Connect(() => this.onCharacterRemoving());
+	public override onStart(): void {
+		super.onStart();
 		this.instance.CharacterAppearanceLoaded.Connect(() => this.onCharacterAppearanceLoaded());
-	}
-
-	public getBackpack(): Backpack | undefined {
-		if (!this.backpack) {
-			warn(`${this.instance.Name} does not have a backpack`);
-		}
-		return this.backpack;
-	}
-
-	public getCharacter(): HumanoidCharacterInstance | undefined {
-		if (!this.character) {
-			warn(`${this.instance.Name} does not have a character`);
-		}
-		return this.character;
 	}
 
 	public getToolJoint(): Motor6D | undefined {
@@ -83,19 +60,17 @@ export class TWPlayerComponent extends BaseComponent<{}, Player> implements OnSt
 	}
 
 	public getTool(toolType: ToolType): ToolInstance | undefined {
-		const tool = this.tools[toolType];
-		if (!tool) {
+		if (!this.tools[toolType]) {
 			warn(`${this.instance.Name} does not have a ${toolType}`);
 		}
-		return tool;
+		return this.tools[toolType];
 	}
 
-	public getToolConfig<T extends ToolType>(toolType: T): ToolConfigMap[T] | undefined {
-		const config = this.toolConfigs[toolType];
-		if (!config) {
+	public getToolConfig(toolType: ToolType): ToolConfigMap[ToolType] | undefined {
+		if (!this.toolConfigs[toolType]) {
 			warn(`${this.instance.Name} does not have a ${toolType} config`);
 		}
-		return config;
+		return this.toolConfigs[toolType];
 	}
 
 	public getCurrentTool(): ToolInstance | undefined {
@@ -105,17 +80,9 @@ export class TWPlayerComponent extends BaseComponent<{}, Player> implements OnSt
 		this.curTool = tool;
 	}
 
-	private onCharacterAdded(character: Model): void {
-		if (!this.isHumanoidCharacter(character)) {
-			warn(`${this.instance.Name} does not have a humanoid character`);
-			return;
-		}
-		this.character = character;
-		this.character.PrimaryPart = this.character.HumanoidRootPart;
-
-		this.backpack = this.instance.FindFirstChildOfClass("Backpack");
-		if (!this.backpack) {
-			warn(`${this.instance.Name} does not have a backpack`);
+	private createToolJoint(): void {
+		if (!this.character) {
+			warn(`${this.instance.Name} does not have a character`);
 			return;
 		}
 
@@ -126,14 +93,18 @@ export class TWPlayerComponent extends BaseComponent<{}, Player> implements OnSt
 				? (this.character as R6CharacterInstance).Torso
 				: (this.character as R15CharacterInstance).UpperTorso;
 		this.toolJoint.Parent = this.toolJoint.Part0;
+	}
 
-		this.isAlive = true;
-		this.combatEnabled = true;
+	private fetchTools(): void {
+		if (!this.backpack) {
+			warn(`${this.instance.Name} does not have a backpack`);
+			return;
+		}
 
 		const hammer = findFirstChildWithTag(this.backpack, ToolType.Hammer);
 		const slingshot = findFirstChildWithTag(this.backpack, ToolType.Slingshot);
 		if (!(hammer && this.isToolInstance(hammer)) || !(slingshot && this.isToolInstance(slingshot))) {
-			warn(`${this.instance.Name} does not have a valid hammer or slingshot`);
+			warn(`${this.instance.Name} does not have a hammer or slingshot`);
 			return;
 		}
 		this.tools[ToolType.Hammer] = hammer;
@@ -142,28 +113,28 @@ export class TWPlayerComponent extends BaseComponent<{}, Player> implements OnSt
 		this.toolConfigs[ToolType.Slingshot] = getSlingshotConfig(slingshot.Configuration);
 	}
 
-	private onCharacterRemoving(): void {
-		if (this.isAlive) this.onDied();
+	protected override onCharacterAdded(character: Model): void {
+		super.onCharacterAdded(character);
+
+		this.createToolJoint();
+		this.fetchTools();
 	}
 
 	private onCharacterAppearanceLoaded(): void {
-		if (!this.character) {
-			warn(`${this.instance.Name} does not have a character`);
-			return;
-		}
+		if (!this.character) return;
 
-		for (const instance of this.character.GetChildren()) {
-			if (instance.IsA("Accessory")) {
-				const handle = instance.FindFirstChild("Handle") as BasePart;
-				if (handle) {
+		this.character.GetChildren().forEach((child) => {
+			if (child.IsA("Accessory")) {
+				const handle = child.FindFirstChild("Handle");
+				if (handle && handle.IsA("BasePart")) {
 					handle.CanQuery = false;
 				}
 			}
-		}
+		});
 	}
 
-	private onDied(): void {
-		this.isAlive = false;
+	protected override onDied(): void {
+		super.onDied();
 		this.combatEnabled = false;
 
 		this.tools = {};

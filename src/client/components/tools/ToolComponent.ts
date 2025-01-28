@@ -1,6 +1,7 @@
 import { BaseComponent, Component } from "@flamework/components";
 import Object from "@rbxts/object-utils";
-import { TWCharacterComponent, ViewmodelComponent } from "client/components/characters";
+import { GameCharacterComponent } from "client/components/characters";
+import { ViewmodelComponent } from "client/components/characters/addons";
 import { ToolAnimations, ToolInstance } from "shared/types/toolTypes";
 
 @Component()
@@ -30,16 +31,16 @@ export abstract class ToolComponent extends BaseComponent<{}, ToolInstance> {
 	private _isActive: boolean = false;
 	private _mouseIcon: string = "rbxassetid://SystemCursors/Arrow";
 
-	protected twCharacter!: TWCharacterComponent;
+	protected gameCharacter!: GameCharacterComponent;
 	private viewmodel!: ViewmodelComponent;
 
 	protected charAnimTracks!: Record<keyof ToolAnimations, AnimationTrack>;
 	protected viewmodelAnimTracks!: Record<keyof ToolAnimations, AnimationTrack>;
 
-	public initialize(twCharacter: TWCharacterComponent, viewmodel: ViewmodelComponent): void {
-		if (this.twCharacter || this.viewmodel) error("Tool component already initialized");
+	public initialize(gameCharacter: GameCharacterComponent, viewmodel: ViewmodelComponent): void {
+		if (this.gameCharacter || this.viewmodel) error("Tool component already initialized");
 
-		this.twCharacter = twCharacter;
+		this.gameCharacter = gameCharacter;
 		this.viewmodel = viewmodel;
 
 		this.loadAnimations();
@@ -77,9 +78,9 @@ export abstract class ToolComponent extends BaseComponent<{}, ToolInstance> {
 	}
 
 	private async loadAnimations(): Promise<void> {
-		const charAnimator = this.twCharacter.instance.Humanoid.Animator;
+		const charAnimator = this.gameCharacter.instance.Humanoid.Animator;
 		const charAnimations =
-			this.twCharacter.instance.Humanoid.RigType === Enum.HumanoidRigType.R6
+			this.gameCharacter.instance.Humanoid.RigType === Enum.HumanoidRigType.R6
 				? this.instance.Animations.R6
 				: this.instance.Animations.R15;
 		this.charAnimTracks = {

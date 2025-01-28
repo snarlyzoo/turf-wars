@@ -1,6 +1,6 @@
 import { Components } from "@flamework/components";
 import { Controller, OnStart } from "@flamework/core";
-import { TiltCharacterComponent } from "client/components/characters";
+import { TiltCharacterComponent } from "client/components/characters/addons";
 import { Events } from "client/network";
 import { ProjectileCaster } from "shared/modules";
 import { HumanoidCharacterInstance } from "shared/types/characterTypes";

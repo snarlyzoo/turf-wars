@@ -9,9 +9,7 @@ function limitRateMiddleware<I extends Array<unknown>>(maxRate: number): Network
 	const lastTimeMap = new Map<string, Map<number, number>>();
 
 	Players.PlayerRemoving.Connect((player) => {
-		lastTimeMap.forEach((eventLastTimeMap) => {
-			eventLastTimeMap.delete(player.UserId);
-		});
+		lastTimeMap.forEach((eventLastTimeMap) => eventLastTimeMap.delete(player.UserId));
 	});
 
 	return (processNext, event) => {

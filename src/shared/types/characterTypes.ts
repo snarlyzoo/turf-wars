@@ -1,3 +1,8 @@
+export enum CharacterType {
+	Lobby = "Lobby",
+	Game = "Game",
+}
+
 export interface HumanoidCharacterInstance extends Model {
 	Humanoid: Humanoid & {
 		Animator: Animator;
@@ -28,13 +33,13 @@ export interface R15CharacterInstance extends HumanoidCharacterInstance {
 	UpperTorso: Part;
 }
 
-export interface R6TWCharacterInstance extends R6CharacterInstance {
+export interface R6GameCharacterInstance extends R6CharacterInstance {
 	Torso: R6CharacterInstance["Torso"] & {
 		ToolJoint: Motor6D;
 	};
 }
 
-export interface R15TWCharacterInstance extends R15CharacterInstance {
+export interface R15GameCharacterInstance extends R15CharacterInstance {
 	UpperTorso: R15CharacterInstance["UpperTorso"] & {
 		ToolJoint: Motor6D;
 	};

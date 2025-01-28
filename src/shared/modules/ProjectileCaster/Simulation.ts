@@ -1,4 +1,5 @@
 //!native
+import Object from "@rbxts/object-utils";
 import { RunService, Workspace } from "@rbxts/services";
 import { Queue } from "shared/classes/queues";
 import { Projectile, ProjectileModifier } from "shared/types/projectileTypes";
@@ -70,7 +71,7 @@ export class Simulation {
 	private processProjectile(
 		projectile: Projectile,
 		impacted: Map<Projectile, RaycastResult>,
-		destroyed: Array<Projectile>,
+		destroyed: Set<Projectile>,
 	): void {
 		const tick = os.clock();
 		const dt = tick - projectile.lastTick;
@@ -80,12 +81,12 @@ export class Simulation {
 		const raycastResult = Workspace.Raycast(curPosition, nextPosition.sub(curPosition), projectile.raycastParams);
 		if (raycastResult) {
 			impacted.set(projectile, raycastResult);
-			destroyed.push(projectile);
+			destroyed.add(projectile);
 			return;
 		}
 
 		if (tick - projectile.startTick > projectile.lifetime) {
-			destroyed.push(projectile);
+			destroyed.add(projectile);
 			return;
 		}
 
@@ -97,12 +98,12 @@ export class Simulation {
 	}
 
 	private handleImpacts(impacted: Map<Projectile, RaycastResult>): void {
-		for (const [projectile, raycastResult] of impacted) {
+		Object.entries(impacted).forEach(([projectile, raycastResult]) => {
 			if (projectile.onImpact) projectile.onImpact.Fire(projectile, raycastResult);
-		}
+		});
 	}
 
-	private cleanupDestroyed(destroyed: Array<Projectile>): void {
+	private cleanupDestroyed(destroyed: Set<Projectile>): void {
 		for (const projectile of destroyed) {
 			if (projectile.pvInstance) projectile.pvInstance.Destroy();
 			this.incrementTasks(-1);
@@ -120,7 +121,7 @@ export class Simulation {
 		const maxSimTime = (deltaTime - (startTick - this.frameStartTick)) * this.MAX_SIMULATION_TIME_FACTOR;
 
 		const impacted: Map<Projectile, RaycastResult> = new Map();
-		const destroyed: Array<Projectile> = [];
+		const destroyed: Set<Projectile> = new Set();
 		for (let i = 0; i < this.queue.size(); i++) {
 			if (os.clock() - startTick > maxSimTime) {
 				warn("Simulation exceeded maximum time limit");

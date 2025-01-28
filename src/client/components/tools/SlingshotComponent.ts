@@ -1,6 +1,7 @@
 import { Component } from "@flamework/components";
 import { Players, Workspace } from "@rbxts/services";
-import { TWCharacterComponent, ViewmodelComponent } from "client/components/characters";
+import { GameCharacterComponent } from "client/components/characters";
+import { ViewmodelComponent } from "client/components/characters/addons";
 import { Events } from "client/network";
 import { ProjectileCaster } from "shared/modules";
 import { Projectile, ProjectileHitType, ProjectileModifier } from "shared/types/projectileTypes";
@@ -20,7 +21,7 @@ export class SlingshotComponent extends ToolComponent {
 
 	private projectileImpactEvent = new Instance("BindableEvent");
 
-	public override initialize(character: TWCharacterComponent, viewmodel: ViewmodelComponent): void {
+	public override initialize(character: GameCharacterComponent, viewmodel: ViewmodelComponent): void {
 		super.initialize(character, viewmodel);
 
 		this.mouseIcon = "rbxassetid://textures/GunCursor.png";
@@ -40,23 +41,23 @@ export class SlingshotComponent extends ToolComponent {
 
 	private fireProjectile(toFire: boolean): void {
 		this.toFire = toFire;
-		if (!this.equipped || this.isActive || !this.toFire || !this.twCharacter.combatEnabled) return;
+		if (!this.equipped || this.isActive || !this.toFire || !this.gameCharacter.combatEnabled) return;
 
 		this.isActive = true;
 
 		let speed = this.config.projectile.startSpeed;
 		const tick = os.clock();
-		while (this.equipped && this.toFire && this.twCharacter.combatEnabled) task.wait();
+		while (this.equipped && this.toFire && this.gameCharacter.combatEnabled) task.wait();
 		speed = math.min(speed + this.config.drawSpeed * (os.clock() - tick), this.config.projectile.maxSpeed);
 
-		if (this.equipped && this.twCharacter.combatEnabled) {
-			const camCFrame = this.twCharacter.camera.CFrame;
+		if (this.equipped && this.gameCharacter.combatEnabled) {
+			const camCFrame = this.gameCharacter.camera.CFrame;
 
 			const timestamp = Workspace.GetServerTimeNow();
 			Events.FireProjectile.fire(camCFrame.Position, camCFrame.LookVector, speed, timestamp);
 
 			const raycastParams = new RaycastParams();
-			raycastParams.FilterDescendantsInstances = [this.twCharacter.instance];
+			raycastParams.FilterDescendantsInstances = [this.gameCharacter.instance];
 			raycastParams.FilterType = Enum.RaycastFilterType.Exclude;
 
 			const projectileModifier: ProjectileModifier = {
@@ -80,7 +81,7 @@ export class SlingshotComponent extends ToolComponent {
 	}
 
 	private fetchTeamColor(): void {
-		let teamColor = this.twCharacter.player.Team?.TeamColor;
+		let teamColor = this.gameCharacter.player.Team?.TeamColor;
 		if (!teamColor) {
 			warn("Player does not have a team color");
 			teamColor = new BrickColor("Medium stone grey");
@@ -111,7 +112,7 @@ export class SlingshotComponent extends ToolComponent {
 			if (!humanoid || humanoid.Health <= 0) return;
 
 			const player = Players.GetPlayerFromCharacter(hitParent);
-			if (player && player.Team === this.twCharacter.player.Team) return;
+			if (player && player.Team === this.gameCharacter.player.Team) return;
 
 			projectileHitType = ProjectileHitType.Character;
 		}

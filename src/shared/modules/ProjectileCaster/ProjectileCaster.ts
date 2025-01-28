@@ -28,9 +28,7 @@ export abstract class ProjectileCaster {
 				actor.SendMessage("Initialize", this.projectileFolder);
 				initializedActors.push(actor);
 			}
-			for (const actor of initializedActors) {
-				this.actorQueue.enqueue(actor);
-			}
+			initializedActors.forEach((actor) => this.actorQueue.enqueue(actor));
 
 			print("Projectile caster initialized.");
 		});

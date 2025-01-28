@@ -1,15 +1,17 @@
 import { Components } from "@flamework/components";
 import { OnStart, Service } from "@flamework/core";
 import { Players } from "@rbxts/services";
-import { TWPlayerComponent } from "server/components";
+import { PlayerComponent, GamePlayerComponent, LobbyPlayerComponent } from "server/components/players";
+import { Events } from "server/network";
+import { CharacterType } from "shared/types/characterTypes";
 
 @Service()
 export class PlayerRegistry implements OnStart {
-	private readonly MAX_KICK_OFFENSES = 3;
+	private readonly MAX_KICK_OFFENSES: number = 3;
 
-	private twPlayers = new Map<number, TWPlayerComponent>();
+	private playerComponents: Map<number, PlayerComponent> = new Map();
 
-	private kickOffenses = new Map<number, number>();
+	private kickOffenses: Map<number, number> = new Map();
 
 	public constructor(private components: Components) {}
 
@@ -18,13 +20,36 @@ export class PlayerRegistry implements OnStart {
 		Players.PlayerRemoving.Connect((player) => this.onPlayerRemoving(player));
 	}
 
-	public getTWPlayer(player: Player): TWPlayerComponent | undefined {
-		return this.twPlayers.get(player.UserId);
+	public getPlayerComponent(player: Player): PlayerComponent | undefined {
+		return this.playerComponents.get(player.UserId);
 	}
 
-	public setCombatEnabledForAll(enabled: boolean): void {
-		this.twPlayers.forEach((twPlayer) => {
-			twPlayer.combatEnabled = enabled;
+	public setPlayerComponent(player: Player, characterType: CharacterType): void {
+		print(`Constructing ${characterType} player component for ${player.Name}...`);
+
+		let playerComponent = this.getPlayerComponent(player);
+		if (playerComponent) {
+			this.destroyPlayerComponent(playerComponent);
+		}
+
+		if (characterType === CharacterType.Game) {
+			playerComponent = this.components.addComponent<GamePlayerComponent>(player);
+		} else {
+			playerComponent = this.components.addComponent<LobbyPlayerComponent>(player);
+		}
+		this.playerComponents.set(player.UserId, playerComponent);
+
+		playerComponent.respawn();
+
+		print(`${characterType} player component constructed for ${player.Name}.`);
+	}
+
+	public setCombatEnabled(enabled: boolean): void {
+		this.playerComponents.forEach((playerComponent) => {
+			if (playerComponent instanceof GamePlayerComponent) {
+				playerComponent.combatEnabled = enabled;
+				Events.SetCombatEnabled.fire(playerComponent.instance, enabled);
+			}
 		});
 	}
 
@@ -41,19 +66,25 @@ export class PlayerRegistry implements OnStart {
 		this.kickOffenses.set(player.UserId, offenses + 1);
 	}
 
+	private destroyPlayerComponent(playerComponent: PlayerComponent): void {
+		const player = playerComponent.instance;
+		if (playerComponent instanceof GamePlayerComponent) {
+			this.components.removeComponent<GamePlayerComponent>(player);
+		} else {
+			this.components.removeComponent<LobbyPlayerComponent>(player);
+		}
+		this.playerComponents.delete(player.UserId);
+	}
+
 	private onPlayerAdded(player: Player): void {
-		print(`Constructing player component for ${player.Name}...`);
-
-		this.twPlayers.set(player.UserId, this.components.addComponent<TWPlayerComponent>(player));
-
+		this.setPlayerComponent(player, CharacterType.Lobby);
 		this.kickOffenses.set(player.UserId, 0);
-
-		print(`Player component constructed for ${player.Name}.`);
 	}
 	private onPlayerRemoving(player: Player): void {
-		this.components.removeComponent<TWPlayerComponent>(player);
-		this.twPlayers.delete(player.UserId);
-
+		const playerComponent = this.getPlayerComponent(player);
+		if (playerComponent) {
+			this.destroyPlayerComponent(playerComponent);
+		}
 		this.kickOffenses.delete(player.UserId);
 	}
 }
