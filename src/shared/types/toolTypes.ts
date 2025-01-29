@@ -5,8 +5,6 @@ export const enum ToolType {
 	Slingshot = "Slingshot",
 }
 
-type AnimationFolder = Folder & ToolAnimations;
-
 export interface ToolInstance extends Model {
 	Animations: Folder & {
 		R6: AnimationFolder;
@@ -14,7 +12,6 @@ export interface ToolInstance extends Model {
 		Viewmodel: AnimationFolder;
 	};
 	Handle: BasePart;
-	Configuration?: Configuration;
 }
 
 export interface ToolAnimations {
@@ -22,10 +19,17 @@ export interface ToolAnimations {
 	Equip: Animation;
 }
 
+type AnimationFolder = Folder & ToolAnimations;
+
+export type HammerConfig = {
+	range: number;
+
+	damage: number;
+	rateOfDamage: number;
+};
+
 export type SlingshotConfig = {
 	drawSpeed: number;
-
 	projectile: ProjectileConfig;
-
 	rateOfFire: number;
 };

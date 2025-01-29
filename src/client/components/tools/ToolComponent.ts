@@ -1,4 +1,4 @@
-import { BaseComponent, Component } from "@flamework/components";
+import { BaseComponent, Component, Components } from "@flamework/components";
 import Object from "@rbxts/object-utils";
 import { GameCharacterComponent } from "client/components/characters";
 import { ViewmodelComponent } from "client/components/characters/addons";
@@ -37,6 +37,10 @@ export abstract class ToolComponent extends BaseComponent<{}, ToolInstance> {
 	protected charAnimTracks!: Record<keyof ToolAnimations, AnimationTrack>;
 	protected viewmodelAnimTracks!: Record<keyof ToolAnimations, AnimationTrack>;
 
+	public constructor(protected components: Components) {
+		super();
+	}
+
 	public initialize(gameCharacter: GameCharacterComponent, viewmodel: ViewmodelComponent): void {
 		if (this.gameCharacter || this.viewmodel) error("Tool component already initialized");
 
@@ -73,7 +77,7 @@ export abstract class ToolComponent extends BaseComponent<{}, ToolInstance> {
 
 	public abstract usePrimaryAction(toActivate: boolean): void;
 
-	public useSecondaryAction(toActivate: boolean): void {
+	public useSecondaryAction(): void {
 		warn(`Secondary action not implemented for ${this.instance.Name}`);
 	}
 

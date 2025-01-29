@@ -1,3 +1,8 @@
+export const enum ProjectileHitType {
+	Block,
+	Character,
+}
+
 export type Projectile = {
 	position: Vector3;
 	velocity: Vector3;
@@ -16,10 +21,21 @@ export type Projectile = {
 	onImpact?: BindableEvent;
 };
 
-export const enum ProjectileHitType {
-	Block,
-	Character,
-}
+export type ProjectileConfig = {
+	startSpeed: number;
+	maxSpeed: number;
+
+	gravity: number;
+
+	lifetime: number;
+
+	damage: {
+		baseDamage: number;
+		speedMultiplier: number;
+	};
+
+	pvInstance?: PVInstance;
+};
 
 export type ProjectileModifier = {
 	speed?: number;
@@ -40,20 +56,4 @@ export type ProjectileRecord = {
 	direction: Vector3;
 	speed: number;
 	config: ProjectileConfig;
-};
-
-export type ProjectileConfig = {
-	startSpeed: number;
-	maxSpeed: number;
-
-	gravity: number;
-
-	lifetime: number;
-
-	damage: {
-		baseDamage: number;
-		speedMultiplier: number;
-	};
-
-	pvInstance?: PVInstance;
 };

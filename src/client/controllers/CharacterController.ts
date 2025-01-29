@@ -3,8 +3,16 @@ import { Controller, OnStart } from "@flamework/core";
 import { ContextActionService, Players } from "@rbxts/services";
 import { CharacterComponent, GameCharacterComponent, LobbyCharacterComponent } from "client/components/characters";
 import { Events } from "client/network";
+import { CHARACTER_EVENT_RATE_LIMIT, TOOL_EVENT_RATE_LIMIT } from "shared/network";
 import { CharacterType } from "shared/types/characterTypes";
 import { ToolType } from "shared/types/toolTypes";
+
+enum GameInputAction {
+	EquipPrimary = "EquipPrimary",
+	EquipSecondary = "EquipSecondary",
+	PrimaryToolAction = "PrimaryToolAction",
+	SecondaryToolAction = "SecondaryToolAction",
+}
 
 @Controller()
 export class CharacterController implements OnStart {
@@ -13,6 +21,9 @@ export class CharacterController implements OnStart {
 	private combatEnabled: boolean = false;
 
 	private characterComponent?: CharacterComponent;
+
+	private lastCharacterEventTick: number = 0;
+	private lastToolEventTick: number = 0;
 
 	public constructor(private components: Components) {}
 
@@ -27,37 +38,37 @@ export class CharacterController implements OnStart {
 
 	private bindGameInputActions(): void {
 		ContextActionService.BindAction(
-			"EquipPrimary",
+			GameInputAction.EquipPrimary,
 			(actionName, inputState) => this.onEquipAction(actionName, inputState),
 			false,
 			Enum.KeyCode.One,
 		);
 		ContextActionService.BindAction(
-			"EquipSecondary",
+			GameInputAction.EquipSecondary,
 			(actionName, inputState) => this.onEquipAction(actionName, inputState),
 			false,
 			Enum.KeyCode.Two,
 		);
 
 		ContextActionService.BindAction(
-			"PrimaryToolAction",
+			GameInputAction.PrimaryToolAction,
 			(actionName, inputState) => this.onToolAction(actionName, inputState),
 			false,
 			Enum.UserInputType.MouseButton1,
 		);
 		ContextActionService.BindAction(
-			"SecondaryToolAction",
+			GameInputAction.SecondaryToolAction,
 			(actionName, inputState) => this.onToolAction(actionName, inputState),
 			false,
 			Enum.UserInputType.MouseButton2,
 		);
 	}
 	private unbindGameInputActions(): void {
-		ContextActionService.UnbindAction("EquipPrimary");
-		ContextActionService.UnbindAction("EquipSecondary");
+		ContextActionService.UnbindAction(GameInputAction.EquipPrimary);
+		ContextActionService.UnbindAction(GameInputAction.EquipSecondary);
 
-		ContextActionService.UnbindAction("PrimaryToolAction");
-		ContextActionService.UnbindAction("SecondaryToolAction");
+		ContextActionService.UnbindAction(GameInputAction.PrimaryToolAction);
+		ContextActionService.UnbindAction(GameInputAction.SecondaryToolAction);
 	}
 
 	private onConstructCharacterComponent(characterType: CharacterType): void {
@@ -104,6 +115,10 @@ export class CharacterController implements OnStart {
 		if (!(this.characterComponent instanceof GameCharacterComponent)) return;
 
 		if (inputState === Enum.UserInputState.Begin) {
+			const tick = os.clock();
+			if (tick - this.lastCharacterEventTick < CHARACTER_EVENT_RATE_LIMIT) return;
+			this.lastCharacterEventTick = tick;
+
 			this.characterComponent.equipTool(actionName === "EquipPrimary" ? ToolType.Slingshot : ToolType.Hammer);
 		}
 	}
@@ -114,11 +129,15 @@ export class CharacterController implements OnStart {
 		const tool = this.characterComponent.getCurrentTool();
 		if (!tool) return;
 
-		const toActivate = inputState === Enum.UserInputState.Begin;
-		if (actionName === "PrimaryToolAction") {
-			tool.usePrimaryAction(toActivate);
-		} else {
-			tool.useSecondaryAction(toActivate);
+		const isPrimaryAction = actionName === "PrimaryToolAction";
+		if (inputState === Enum.UserInputState.Begin) {
+			const tick = os.clock();
+			if (tick - this.lastToolEventTick < TOOL_EVENT_RATE_LIMIT) return;
+			this.lastToolEventTick = tick;
+
+			isPrimaryAction ? tool.usePrimaryAction(true) : tool.useSecondaryAction();
+		} else if (inputState === Enum.UserInputState.End && isPrimaryAction) {
+			tool.usePrimaryAction(false);
 		}
 	}
 }

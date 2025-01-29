@@ -5,7 +5,7 @@ import { TiltCharacterComponent } from "client/components/characters/addons";
 import { CharacterController } from "client/controllers";
 import { Events } from "client/network";
 import { DisposableComponent } from "shared/components";
-import { TILT_SEND_RATE } from "shared/constants";
+import { TILT_UPDATE_SEND_RATE } from "shared/network";
 import { HumanoidCharacterInstance } from "shared/types/characterTypes";
 
 @Component()
@@ -71,11 +71,11 @@ export abstract class CharacterComponent
 	public onTick(dt: number): void {
 		if (!this.isAlive) return;
 
-		this.tiltAccumulator += dt;
-		while (this.tiltAccumulator >= TILT_SEND_RATE) {
+		while (this.tiltAccumulator >= TILT_UPDATE_SEND_RATE) {
 			this.updateTilt();
-			this.tiltAccumulator -= TILT_SEND_RATE;
+			this.tiltAccumulator -= TILT_UPDATE_SEND_RATE;
 		}
+		this.tiltAccumulator += dt;
 	}
 
 	public override destroy(): void {

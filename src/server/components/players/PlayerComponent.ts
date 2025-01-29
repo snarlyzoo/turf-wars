@@ -26,23 +26,24 @@ export abstract class PlayerComponent extends BaseComponent<{}, Player> implemen
 		this.instance.CharacterRemoving.Connect(() => this.onCharacterRemoving());
 	}
 
+	public getBackpack(): Backpack | undefined {
+		return this.backpack;
+	}
+
+	public getCharacter(): HumanoidCharacterInstance | undefined {
+		return this.character;
+	}
+
 	public respawn(): void {
 		this.instance.LoadCharacter();
 		Events.ConstructCharacterComponent.fire(this.instance, this.characterType);
 	}
 
-	public getBackpack(): Backpack | undefined {
-		if (!this.backpack) {
-			warn(`${this.instance.Name} does not have a backpack`);
-		}
-		return this.backpack;
-	}
+	public updateTilt(angle?: number): void {
+		if (!this.isAlive) return;
 
-	public getCharacter(): HumanoidCharacterInstance | undefined {
-		if (!this.character) {
-			warn(`${this.instance.Name} does not have a character`);
-		}
-		return this.character;
+		const character = this.getCharacter();
+		if (character) Events.CharacterTiltChanged.except(this.instance, character, angle);
 	}
 
 	private fetchBackpack(): void {

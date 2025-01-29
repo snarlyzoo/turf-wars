@@ -1,17 +1,14 @@
 import { Service } from "@flamework/core";
 import { Players, Workspace } from "@rbxts/services";
 import { GamePlayerComponent } from "server/components/players";
-import { Events } from "server/network";
+import { Events, ORIGIN_ERROR_TOLERANCE, PING_ERROR_TOLERANCE } from "server/network";
 import { PlayerRegistry } from "server/services";
+import { Physics } from "shared/modules";
 import { ProjectileHitType, ProjectileRecord } from "shared/types/projectileTypes";
 import { ToolType } from "shared/types/toolTypes";
-import { Physics } from "shared/utility";
 
 @Service()
-export class ProjectileService {
-	private readonly MAX_PING_ERROR: number = 0.05;
-	private readonly MAX_ORIGIN_ERROR: number = 4;
-
+export class ProjectileActionService {
 	private readonly Blocks = Workspace.FindFirstChild("Blocks") as Folder;
 
 	public constructor(private playerRegistry: PlayerRegistry) {}
@@ -34,7 +31,10 @@ export class ProjectileService {
 		}
 
 		const character = gamePlayer.getCharacter();
-		if (!character) return;
+		if (!character) {
+			warn(`${gamePlayer.instance.Name} does not have a character`);
+			return;
+		}
 
 		const tool = gamePlayer.getCurrentTool();
 		if (!tool || !tool.HasTag("Slingshot")) {
@@ -48,8 +48,8 @@ export class ProjectileService {
 			return;
 		}
 
-		const charPos = character.GetPivot().Position;
-		if (charPos.sub(origin).Magnitude > this.MAX_ORIGIN_ERROR) {
+		const charPos = character.GetPivot().Position.add(new Vector3(0, 1.5, 0));
+		if (charPos.sub(origin).Magnitude > ORIGIN_ERROR_TOLERANCE) {
 			warn(`${gamePlayer.instance.Name} fired a projectile with an invalid origin`);
 			return;
 		}
@@ -65,17 +65,8 @@ export class ProjectileService {
 			return;
 		}
 
-		const serverTimestamp = Workspace.GetServerTimeNow();
-		if (
-			timestamp > serverTimestamp ||
-			serverTimestamp - timestamp > gamePlayer.instance.GetNetworkPing() + this.MAX_PING_ERROR
-		) {
-			warn(`${gamePlayer.instance.Name} fired a projectile with an invalid timestamp`);
-			return;
-		}
-
 		const tick = os.clock();
-		if (tick - gamePlayer.lastFireProjectileTick < 60 / config.rateOfFire - this.MAX_PING_ERROR) {
+		if (tick - gamePlayer.lastFireProjectileTick < 60 / config.rateOfFire - PING_ERROR_TOLERANCE) {
 			this.playerRegistry.addKickOffense(gamePlayer.instance, "firing a projectile too quickly");
 			return;
 		}
@@ -88,10 +79,9 @@ export class ProjectileService {
 		};
 		gamePlayer.projectileRecords.set(timestamp, projectileRecord);
 		task.delay(config.projectile.lifetime, () => gamePlayer.projectileRecords.delete(timestamp));
+		gamePlayer.lastFireProjectileTick = tick;
 
 		Events.ProjectileFired.except(gamePlayer.instance, gamePlayer.instance, projectileRecord);
-
-		gamePlayer.lastFireProjectileTick = tick;
 	}
 
 	public handleRegisterProjectileHit(
@@ -106,15 +96,6 @@ export class ProjectileService {
 			return;
 		}
 
-		const serverTimestamp = Workspace.GetServerTimeNow();
-		if (
-			hitTimestamp > serverTimestamp ||
-			serverTimestamp - hitTimestamp > gamePlayer.instance.GetNetworkPing() + this.MAX_PING_ERROR
-		) {
-			warn(`${gamePlayer.instance.Name} registered a projectile hit with an invalid timestamp`);
-			return;
-		}
-
 		const projectileRecord = gamePlayer.projectileRecords.get(firedTimestamp);
 		if (!projectileRecord) {
 			warn(`${gamePlayer.instance.Name} registered a projectile hit for an invalid projectile`);
@@ -123,7 +104,7 @@ export class ProjectileService {
 		const config = projectileRecord.config;
 
 		const dt = hitTimestamp - firedTimestamp;
-		if (dt < 0 || dt > config.lifetime + this.MAX_PING_ERROR) {
+		if (dt < 0 || dt > config.lifetime + PING_ERROR_TOLERANCE) {
 			warn(`${gamePlayer.instance.Name} registered a projectile hit with an invalid timestamp difference`);
 			return;
 		}
@@ -132,7 +113,8 @@ export class ProjectileService {
 		const acceleration = new Vector3(0, -config.gravity, 0);
 		const position = Physics.calculatePosition(projectileRecord.origin, velocity, acceleration, dt);
 
-		const maxPositionError = 0.5 * math.max(hitPart.Size.X, hitPart.Size.Y, hitPart.Size.Z) + this.MAX_ORIGIN_ERROR;
+		const maxPositionError =
+			0.5 * math.max(hitPart.Size.X, hitPart.Size.Y, hitPart.Size.Z) + ORIGIN_ERROR_TOLERANCE;
 		if (position.sub(hitPart.Position).Magnitude > maxPositionError) {
 			warn(`${gamePlayer.instance.Name} registered a projectile hit with an invalid position`);
 			return;

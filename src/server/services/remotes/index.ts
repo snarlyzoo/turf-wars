@@ -1,2 +1,2 @@
-export { CharacterActionService } from "./CharacterActionService";
-export { ProjectileService } from "./ProjectileService";
+export { BlockActionService } from "./BlockActionService";
+export { ProjectileActionService } from "./ProjectileActionService";

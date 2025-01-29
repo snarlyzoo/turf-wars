@@ -66,10 +66,10 @@ export class RoundManager implements OnStart {
 	public constructor(private playerRegistry: PlayerRegistry) {
 		if (RunService.IsStudio()) {
 			this.MIN_PLAYER_COUNT = 1;
-			this.INTERMISSION_TIME = 5;
+			this.INTERMISSION_TIME = 2;
 			this.PHASE_SEQUENCE = [
 				{ Type: PhaseType.Build, Duration: 5 },
-				{ Type: PhaseType.Combat, Duration: 10 },
+				{ Type: PhaseType.Combat, Duration: 60 },
 			];
 		}
 	}

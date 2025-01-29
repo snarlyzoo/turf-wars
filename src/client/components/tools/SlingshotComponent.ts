@@ -3,16 +3,15 @@ import { Players, Workspace } from "@rbxts/services";
 import { GameCharacterComponent } from "client/components/characters";
 import { ViewmodelComponent } from "client/components/characters/addons";
 import { Events } from "client/network";
+import { BlockComponent } from "shared/components";
 import { ProjectileCaster } from "shared/modules";
 import { Projectile, ProjectileHitType, ProjectileModifier } from "shared/types/projectileTypes";
 import { SlingshotConfig } from "shared/types/toolTypes";
-import { getSlingshotConfig } from "shared/utility/getConfig";
+import { getSlingshotConfig } from "shared/utility";
 import { ToolComponent } from "./ToolComponent";
 
 @Component()
 export class SlingshotComponent extends ToolComponent {
-	private readonly Blocks: Folder = Workspace.FindFirstChild("Blocks") as Folder;
-
 	private toFire: boolean = false;
 
 	private teamColor!: BrickColor;
@@ -28,7 +27,7 @@ export class SlingshotComponent extends ToolComponent {
 
 		this.fetchTeamColor();
 
-		this.config = getSlingshotConfig(this.instance.Configuration);
+		this.config = getSlingshotConfig(this.instance.FindFirstChildOfClass("Configuration"));
 
 		this.projectileImpactEvent.Event.Connect((projectile, raycastResult) =>
 			this.onProjectileImpact(projectile, raycastResult),
@@ -93,34 +92,37 @@ export class SlingshotComponent extends ToolComponent {
 		const hitPart = raycastResult.Instance;
 		if (!hitPart) return;
 
-		const hitParent = hitPart.Parent;
-		if (!hitParent) return;
-
 		const firedTimestamp = projectile.timestamp;
 		if (firedTimestamp === undefined) {
 			warn("Projectile fired without timestamp");
 			return;
 		}
 
+		let hitName: string = hitPart.Name;
 		let projectileHitType: ProjectileHitType;
-		if (hitParent === this.Blocks) {
-			if (hitPart.BrickColor === this.teamColor) return;
+		if (hitPart.HasTag("Block")) {
+			const block = this.components.getComponent<BlockComponent>(hitPart);
+			if (!block || block.attributes.TeamColor === this.gameCharacter.player.TeamColor) return;
 
 			projectileHitType = ProjectileHitType.Block;
 		} else {
-			const humanoid = hitParent.FindFirstChildOfClass("Humanoid");
+			const character = hitPart.Parent;
+			if (!character) return;
+
+			const humanoid = character.FindFirstChildOfClass("Humanoid");
 			if (!humanoid || humanoid.Health <= 0) return;
 
-			const player = Players.GetPlayerFromCharacter(hitParent);
+			const player = Players.GetPlayerFromCharacter(character);
 			if (player && player.Team === this.gameCharacter.player.Team) return;
 
+			hitName = `${character.Name}'s ${hitPart.Name}`;
 			projectileHitType = ProjectileHitType.Character;
 		}
 
 		const damage =
 			this.config.projectile.damage.baseDamage +
 			this.config.projectile.damage.speedMultiplier * projectile.velocity.Magnitude;
-		print(`Projectile hit ${hitParent.Name} for ${math.round(damage)} damage`);
+		print(`Projectile hit ${hitName} for ${damage} damage`);
 
 		Events.RegisterProjectileHit.fire(projectileHitType, hitPart, Workspace.GetServerTimeNow(), firedTimestamp);
 	}

@@ -2,8 +2,8 @@
 import Object from "@rbxts/object-utils";
 import { RunService, Workspace } from "@rbxts/services";
 import { Queue } from "shared/classes/queues";
+import { Physics } from "shared/modules";
 import { Projectile, ProjectileModifier } from "shared/types/projectileTypes";
-import { Physics } from "shared/utility";
 
 export class Simulation {
 	private readonly MAX_SIMULATION_TIME_FACTOR: number = 0.5;

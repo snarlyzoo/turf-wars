@@ -1,7 +1,7 @@
 import { BaseComponent, Component } from "@flamework/components";
 import { OnStart } from "@flamework/core";
 import { TweenService, Workspace } from "@rbxts/services";
-import { TILT_SEND_RATE } from "shared/constants";
+import { TILT_UPDATE_SEND_RATE } from "shared/network";
 import { HumanoidCharacterInstance, R6CharacterInstance, R15CharacterInstance } from "shared/types/characterTypes";
 
 @Component()
@@ -9,7 +9,7 @@ export class TiltCharacterComponent extends BaseComponent<{}, HumanoidCharacterI
 	private readonly MAX_RENDER_DISTANCE: number = 100;
 
 	private readonly TWEEN_INFO: TweenInfo = new TweenInfo(
-		TILT_SEND_RATE + 0.01,
+		TILT_UPDATE_SEND_RATE + 0.01,
 		Enum.EasingStyle.Quad,
 		Enum.EasingDirection.Out,
 	);

@@ -1,15 +1,14 @@
 import { Component } from "@flamework/components";
 import { PlayerComponent } from "./PlayerComponent";
 import { Flamework } from "@flamework/core";
-import { SlingshotConfig, ToolInstance, ToolType } from "shared/types/toolTypes";
+import { HammerConfig, SlingshotConfig, ToolInstance, ToolType } from "shared/types/toolTypes";
 import { ProjectileRecord } from "shared/types/projectileTypes";
 import { CharacterType, R15CharacterInstance, R6CharacterInstance } from "shared/types/characterTypes";
-import { findFirstChildWithTag } from "shared/utility";
-import { getSlingshotConfig } from "shared/utility/getConfig";
+import { findFirstChildWithTag, getHammerConfig, getSlingshotConfig } from "shared/utility";
 
 type ToolConfigMap = {
 	[ToolType.Slingshot]: SlingshotConfig;
-	[ToolType.Hammer]: undefined;
+	[ToolType.Hammer]: HammerConfig;
 };
 
 @Component()
@@ -18,27 +17,14 @@ export class GamePlayerComponent extends PlayerComponent {
 
 	private readonly isToolInstance = Flamework.createGuard<ToolInstance>();
 
-	public get combatEnabled(): boolean {
-		return this._combatEnabled;
-	}
-	public set combatEnabled(value: boolean) {
-		this._combatEnabled = value;
-	}
+	public combatEnabled: boolean = false;
 
-	public get lastFireProjectileTick(): number {
-		return this._lastFireProjectileTick;
-	}
-	public set lastFireProjectileTick(value: number) {
-		this._lastFireProjectileTick = value;
-	}
+	public lastDamageBlockTick: number = 0;
+	public lastFireProjectileTick: number = 0;
 
 	public get projectileRecords(): Map<number, ProjectileRecord> {
 		return this._projectileRecords;
 	}
-
-	private _combatEnabled: boolean = false;
-
-	private _lastFireProjectileTick: number = 0;
 	private _projectileRecords: Map<number, ProjectileRecord> = new Map();
 
 	private toolJoint?: Motor6D;
@@ -53,31 +39,74 @@ export class GamePlayerComponent extends PlayerComponent {
 	}
 
 	public getToolJoint(): Motor6D | undefined {
-		if (!this.toolJoint) {
-			warn(`${this.instance.Name} does not have a tool joint`);
-		}
 		return this.toolJoint;
 	}
 
 	public getTool(toolType: ToolType): ToolInstance | undefined {
-		if (!this.tools[toolType]) {
-			warn(`${this.instance.Name} does not have a ${toolType}`);
-		}
 		return this.tools[toolType];
 	}
 
-	public getToolConfig(toolType: ToolType): ToolConfigMap[ToolType] | undefined {
-		if (!this.toolConfigs[toolType]) {
-			warn(`${this.instance.Name} does not have a ${toolType} config`);
-		}
+	public getToolConfig<T extends ToolType>(toolType: T): ToolConfigMap[T] | undefined {
 		return this.toolConfigs[toolType];
 	}
 
 	public getCurrentTool(): ToolInstance | undefined {
 		return this.curTool;
 	}
-	public setCurrentTool(tool?: ToolInstance): void {
-		this.curTool = tool;
+
+	public equipTool(toolType: ToolType): void {
+		if (!this.isAlive) {
+			warn(`${this.instance.Name} is not alive`);
+			return;
+		}
+
+		if (!this.character) {
+			warn(`${this.instance.Name} does not have a character`);
+			return;
+		}
+
+		const newTool = this.getTool(toolType);
+		if (!newTool) {
+			warn(`${this.instance.Name} does not have a ${toolType}`);
+			return;
+		}
+
+		const toolJoint = this.getToolJoint();
+		if (!toolJoint) {
+			warn(`${this.instance.Name} does not have a tool joint`);
+			return;
+		}
+
+		if (this.curTool) {
+			this.curTool.Parent = this.backpack;
+		}
+
+		toolJoint.Part1 = newTool.PrimaryPart;
+		newTool.Parent = this.character;
+
+		this.curTool = newTool;
+
+		this.updateTilt();
+	}
+
+	public unequip(): void {
+		if (!this.curTool) {
+			warn(`${this.instance.Name} does not have a tool equipped`);
+			return;
+		}
+
+		const toolJoint = this.getToolJoint();
+		if (!toolJoint) {
+			warn(`${this.instance.Name} does not have a tool joint`);
+			return;
+		}
+
+		this.curTool.Parent = this.getBackpack();
+		toolJoint.Part1 = undefined;
+
+		this.curTool = undefined;
+
+		this.updateTilt();
 	}
 
 	private createToolJoint(): void {
@@ -110,7 +139,8 @@ export class GamePlayerComponent extends PlayerComponent {
 		this.tools[ToolType.Hammer] = hammer;
 		this.tools[ToolType.Slingshot] = slingshot;
 
-		this.toolConfigs[ToolType.Slingshot] = getSlingshotConfig(slingshot.Configuration);
+		this.toolConfigs[ToolType.Slingshot] = getSlingshotConfig(slingshot.FindFirstChildOfClass("Configuration"));
+		this.toolConfigs[ToolType.Hammer] = getHammerConfig(hammer.FindFirstChildOfClass("Configuration"));
 	}
 
 	protected override onCharacterAdded(character: Model): void {

@@ -1,43 +1,39 @@
 import { OnStart, Service } from "@flamework/core";
 import { PlayerComponent, GamePlayerComponent } from "server/components/players";
-import { Events } from "server/network";
+import { Events, Functions } from "server/network";
 import { PlayerRegistry } from "server/services";
-import { CharacterActionService, ProjectileService } from ".";
+import { BlockActionService, ProjectileActionService } from ".";
 
 @Service()
 class RemoteHandler implements OnStart {
 	public constructor(
 		private playerRegistry: PlayerRegistry,
-		private characterActionService: CharacterActionService,
-		private projectileService: ProjectileService,
+		private blockActionService: BlockActionService,
+		private projectileActionService: ProjectileActionService,
 	) {}
 
 	public onStart(): void {
 		Events.UpdateCharacterTilt.connect((player, angle) =>
-			this.usePlayerComponent(player, (playerComponent) =>
-				this.characterActionService.handleUpdateCharacterTilt(playerComponent, angle),
+			this.usePlayerComponent(player, "UpdateCharacterTilt", (playerComponent) =>
+				playerComponent.updateTilt(angle),
 			),
 		);
 
 		Events.EquipTool.connect((player, toolType) =>
-			this.useGamePlayer(player, (gamePlayer) =>
-				this.characterActionService.handleEquipTool(gamePlayer, toolType),
-			),
+			this.useGamePlayer(player, "EquipTool", (gamePlayer) => gamePlayer.equipTool(toolType)),
 		);
 		Events.UnequipCurrentTool.connect((player) =>
-			this.useGamePlayer(player, (gamePlayer) =>
-				this.characterActionService.handleUnequipCurrentTool(gamePlayer),
-			),
+			this.useGamePlayer(player, "UnequipCurrentTool", (gamePlayer) => gamePlayer.unequip()),
 		);
 
 		Events.FireProjectile.connect((player, origin, direction, speed, timestamp) =>
-			this.useGamePlayer(player, (gamePlayer) =>
-				this.projectileService.handleFireProjectile(gamePlayer, origin, direction, speed, timestamp),
+			this.useGamePlayer(player, "FireProjectile", (gamePlayer) =>
+				this.projectileActionService.handleFireProjectile(gamePlayer, origin, direction, speed, timestamp),
 			),
 		);
 		Events.RegisterProjectileHit.connect((player, hitType, hitPart, hitTimestamp, firedTimestamp) =>
-			this.useGamePlayer(player, (gamePlayer) =>
-				this.projectileService.handleRegisterProjectileHit(
+			this.useGamePlayer(player, "RegisterProjectileHit", (gamePlayer) =>
+				this.projectileActionService.handleRegisterProjectileHit(
 					gamePlayer,
 					hitType,
 					hitPart,
@@ -46,23 +42,44 @@ class RemoteHandler implements OnStart {
 				),
 			),
 		);
+
+		Events.DamageBlock.connect((player, block) =>
+			this.useGamePlayer(player, "DamageBlock", (gamePlayer) =>
+				this.blockActionService.handleDamageBlock(gamePlayer, block),
+			),
+		);
+		Functions.PlaceBlock.setCallback(
+			(player, position) =>
+				this.useGamePlayer(player, "PlaceBlock", (gamePlayer) =>
+					this.blockActionService.handlePlaceBlock(gamePlayer, position),
+				) ?? false,
+		);
 	}
 
-	private usePlayerComponent(player: Player, callback: (playerComponent: PlayerComponent) => void): void {
+	private usePlayerComponent<T>(
+		player: Player,
+		remoteName: string,
+		callback: (playerComponent: PlayerComponent) => T,
+	): T | undefined {
 		const playerComponent = this.playerRegistry.getPlayerComponent(player);
 		if (!playerComponent) {
-			warn(`${player.Name} does not have a player component`);
+			warn(`${player.Name} fired ${remoteName} without a player component`);
 			return;
 		}
-		callback(playerComponent);
+		return callback(playerComponent);
 	}
 
-	private useGamePlayer(player: Player, callback: (gamePlayer: GamePlayerComponent) => void): void {
-		const playerComponent = this.playerRegistry.getPlayerComponent(player);
-		if (!(playerComponent instanceof GamePlayerComponent)) {
-			warn(`${player.Name} does not have a game player component`);
-			return;
-		}
-		callback(playerComponent);
+	private useGamePlayer<T>(
+		player: Player,
+		remoteName: string,
+		callback: (gamePlayer: GamePlayerComponent) => T,
+	): T | undefined {
+		return this.usePlayerComponent(player, remoteName, (playerComponent) => {
+			if (!(playerComponent instanceof GamePlayerComponent)) {
+				warn(`${player.Name} fired ${remoteName} without a game player component`);
+				return;
+			}
+			return callback(playerComponent);
+		});
 	}
 }

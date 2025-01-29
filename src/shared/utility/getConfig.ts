@@ -1,4 +1,11 @@
-import { SlingshotConfig } from "shared/types/toolTypes";
+import { HammerConfig, SlingshotConfig } from "shared/types/toolTypes";
+
+const DEFAULT_HAMMER_CONFIG: HammerConfig = {
+	range: 15,
+
+	damage: 25,
+	rateOfDamage: 500,
+};
 
 const DEFAULT_SLINGSHOT_CONFIG: SlingshotConfig = {
 	drawSpeed: 35,
@@ -19,6 +26,23 @@ const DEFAULT_SLINGSHOT_CONFIG: SlingshotConfig = {
 
 	rateOfFire: 400,
 };
+
+export function getHammerConfig(configuration?: Configuration): HammerConfig {
+	const config = DEFAULT_HAMMER_CONFIG;
+	if (!configuration) return config;
+
+	const damage = configuration.FindFirstChild("Damage");
+	if (damage && damage.IsA("NumberValue")) {
+		config.damage = damage.Value;
+	}
+
+	const rateOfDamage = configuration.FindFirstChild("RateOfDamage");
+	if (rateOfDamage && rateOfDamage.IsA("NumberValue")) {
+		config.rateOfDamage = rateOfDamage.Value;
+	}
+
+	return config;
+}
 
 export function getSlingshotConfig(configuration?: Configuration): SlingshotConfig {
 	const config = DEFAULT_SLINGSHOT_CONFIG;

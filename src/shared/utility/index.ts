@@ -1,2 +1,2 @@
 export { findFirstChildWithTag } from "./findFirstChildWithTag";
-export { Physics } from "./Physics";
+export { getHammerConfig, getSlingshotConfig } from "./getConfig";
