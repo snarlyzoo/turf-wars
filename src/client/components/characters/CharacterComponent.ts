@@ -16,15 +16,14 @@ export abstract class CharacterComponent
 	protected abstract readonly CAMERA_MODE: Enum.CameraMode;
 	private readonly FIELD_OF_VIEW: number = 90;
 
+	public readonly player: Player;
+	public readonly team: Team;
+
 	public get isAlive(): boolean {
 		return this._isAlive;
 	}
 	private set isAlive(value: boolean) {
 		this._isAlive = value;
-	}
-
-	public get player(): Player {
-		return this._player;
 	}
 
 	public get camera(): Camera {
@@ -43,7 +42,6 @@ export abstract class CharacterComponent
 
 	private _isAlive: boolean = false;
 
-	private _player: Player;
 	private _camera!: Camera;
 	private _backpack!: Backpack;
 
@@ -54,7 +52,13 @@ export abstract class CharacterComponent
 
 	public constructor(characterController: CharacterController, protected components: Components) {
 		super();
-		this._player = characterController.player;
+
+		this.player = characterController.player;
+
+		if (!this.player.Team) {
+			error("Player does not have a team");
+		}
+		this.team = this.player.Team;
 	}
 
 	public onStart(): void {
@@ -106,7 +110,7 @@ export abstract class CharacterComponent
 			this.components.removeComponent<TiltCharacterComponent>(this.instance);
 		});
 
-		print("Tilt character component constructed.");
+		print("Tilt character component constructed");
 	}
 
 	private updateTilt(): void {

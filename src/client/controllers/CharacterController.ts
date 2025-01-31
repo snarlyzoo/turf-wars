@@ -74,7 +74,7 @@ export class CharacterController implements OnStart {
 	private onConstructCharacterComponent(characterType: CharacterType): void {
 		const character = this.player.Character;
 		if (!character) {
-			warn("Local player does not have a character.");
+			warn("Local player does not have a character");
 			return;
 		}
 
@@ -90,7 +90,7 @@ export class CharacterController implements OnStart {
 		}
 		this.characterComponent = characterComponent;
 
-		print(`${characterType} character component constructed.`);
+		print(`${characterType} character component constructed`);
 	}
 
 	private onSetCombatEnabled(enabled: boolean): void {

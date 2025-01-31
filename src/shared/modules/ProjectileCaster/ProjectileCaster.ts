@@ -30,7 +30,7 @@ export abstract class ProjectileCaster {
 			}
 			initializedActors.forEach((actor) => this.actorQueue.enqueue(actor));
 
-			print("Projectile caster initialized.");
+			print("Projectile caster initialized");
 		});
 	}
 

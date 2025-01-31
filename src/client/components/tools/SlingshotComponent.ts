@@ -80,7 +80,7 @@ export class SlingshotComponent extends ToolComponent {
 	}
 
 	private fetchTeamColor(): void {
-		let teamColor = this.gameCharacter.player.Team?.TeamColor;
+		let teamColor = this.gameCharacter.team.TeamColor;
 		if (!teamColor) {
 			warn("Player does not have a team color");
 			teamColor = new BrickColor("Medium stone grey");
@@ -102,7 +102,7 @@ export class SlingshotComponent extends ToolComponent {
 		let projectileHitType: ProjectileHitType;
 		if (hitPart.HasTag("Block")) {
 			const block = this.components.getComponent<BlockComponent>(hitPart);
-			if (!block || block.attributes.TeamColor === this.gameCharacter.player.TeamColor) return;
+			if (!block || block.attributes.TeamColor === this.gameCharacter.team.TeamColor) return;
 
 			projectileHitType = ProjectileHitType.Block;
 		} else {
@@ -113,7 +113,7 @@ export class SlingshotComponent extends ToolComponent {
 			if (!humanoid || humanoid.Health <= 0) return;
 
 			const player = Players.GetPlayerFromCharacter(character);
-			if (player && player.Team === this.gameCharacter.player.Team) return;
+			if (player && player.Team === this.gameCharacter.team) return;
 
 			hitName = `${character.Name}'s ${hitPart.Name}`;
 			projectileHitType = ProjectileHitType.Character;

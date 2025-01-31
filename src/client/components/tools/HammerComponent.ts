@@ -1,8 +1,9 @@
-import { Component } from "@flamework/components";
+import { Component, Components } from "@flamework/components";
 import { OnRender } from "@flamework/core";
 import { ReplicatedStorage, Workspace } from "@rbxts/services";
 import { GameCharacterComponent } from "client/components/characters";
 import { ViewmodelComponent } from "client/components/characters/addons";
+import { TurfTracker } from "client/controllers/TurfTracker";
 import { Events, Functions } from "client/network";
 import { BlockComponent } from "shared/components";
 import { BlockGrid } from "shared/modules";
@@ -26,6 +27,10 @@ export class HammerComponent extends ToolComponent implements OnRender {
 	private targetIndicator!: TargetIndicator;
 
 	private config!: HammerConfig;
+
+	public constructor(protected components: Components, private turfTracker: TurfTracker) {
+		super(components);
+	}
 
 	public override initialize(character: GameCharacterComponent, viewmodel: ViewmodelComponent): void {
 		super.initialize(character, viewmodel);
@@ -87,7 +92,7 @@ export class HammerComponent extends ToolComponent implements OnRender {
 		this.isActive = true;
 
 		while (this.equipped && this.toDelete) {
-			if (this.targetBlock && this.targetBlock.attributes.TeamColor === this.gameCharacter.player.TeamColor) {
+			if (this.targetBlock && this.targetBlock.attributes.TeamColor === this.gameCharacter.team.TeamColor) {
 				this.targetBlock.takeDamage(this.config.damage);
 				Events.DamageBlock.fire(this.targetBlock.instance);
 
@@ -103,11 +108,11 @@ export class HammerComponent extends ToolComponent implements OnRender {
 	private placeBlock(): void {
 		if (!this.equipped || this.isActive) return;
 
-		if (!this.placePos || !BlockGrid.isPositionInBounds(this.placePos)) return;
+		if (!this.placePos || !this.turfTracker.isPositionOnTurf(this.placePos, this.gameCharacter.team)) return;
 
 		if (Workspace.GetPartBoundsInBox(new CFrame(this.placePos), this.BLOCK_OVERLAP_SIZE).size() > 0) return;
 
-		const block = BlockGrid.placeBlock(this.placePos, this.gameCharacter.player.TeamColor);
+		const block = BlockGrid.placeBlock(this.placePos, this.gameCharacter.team.TeamColor);
 		Functions.PlaceBlock.invoke(this.placePos).then(() => block.Destroy());
 	}
 }

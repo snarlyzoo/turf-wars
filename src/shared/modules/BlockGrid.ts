@@ -4,13 +4,14 @@ export abstract class BlockGrid {
 	public static readonly BLOCK_SIZE = 3;
 	public static readonly DIMENSIONS = new Vector3(80, 30, 60);
 
-	public static get MIN_BOUNDS(): Vector3 {
-		return new Vector3(-this.DIMENSIONS.X / 2, 0, -this.DIMENSIONS.Z / 2).mul(this.BLOCK_SIZE);
-	}
-
-	public static get MAX_BOUNDS(): Vector3 {
-		return new Vector3(this.DIMENSIONS.X / 2, this.DIMENSIONS.Y, this.DIMENSIONS.Z / 2).mul(this.BLOCK_SIZE);
-	}
+	public static readonly MIN_BOUNDS = new Vector3(-this.DIMENSIONS.X / 2, 0, -this.DIMENSIONS.Z / 2).mul(
+		this.BLOCK_SIZE,
+	);
+	public static readonly MAX_BOUNDS = new Vector3(
+		this.DIMENSIONS.X / 2,
+		this.DIMENSIONS.Y,
+		this.DIMENSIONS.Z / 2,
+	).mul(this.BLOCK_SIZE);
 
 	public static readonly Folder = ((): Folder => {
 		if (RunService.IsServer()) {

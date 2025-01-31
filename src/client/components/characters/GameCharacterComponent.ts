@@ -123,7 +123,7 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 			this.components.removeComponent<ViewmodelComponent>(this.instance);
 		});
 
-		print("Viewmodel component constructed.");
+		print("Viewmodel component constructed");
 	}
 
 	private constructTools(): void {
@@ -144,7 +144,7 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 			this.components.removeComponent<SlingshotComponent>(slingshot);
 		});
 
-		print("Tool components constructed.");
+		print("Tool components constructed");
 	}
 
 	private async attachToolJointToViewmodel(): Promise<void> {

@@ -41,7 +41,7 @@ export class PlayerRegistry implements OnStart {
 
 		playerComponent.respawn();
 
-		print(`${characterType} player component constructed for ${player.Name}.`);
+		print(`${characterType} player component constructed for ${player.Name}`);
 	}
 
 	public setCombatEnabled(enabled: boolean): void {

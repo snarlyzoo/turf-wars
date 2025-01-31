@@ -3,7 +3,7 @@ import { Service } from "@flamework/core";
 import { Workspace } from "@rbxts/services";
 import { GamePlayerComponent } from "server/components/players";
 import { ORIGIN_ERROR_TOLERANCE, PING_ERROR_TOLERANCE } from "server/network";
-import { PlayerRegistry } from "server/services";
+import { PlayerRegistry, TurfService } from "server/services";
 import { BlockComponent } from "shared/components";
 import { BlockGrid } from "shared/modules";
 import { HumanoidCharacterInstance } from "shared/types/characterTypes";
@@ -15,7 +15,11 @@ type HammerContext = [HumanoidCharacterInstance, HammerConfig];
 export class BlockActionService {
 	private readonly BLOCK_OVERLAP_SIZE: Vector3 = new Vector3(1, 1, 1).mul(BlockGrid.BLOCK_SIZE * 0.9);
 
-	public constructor(private components: Components, private playerRegistry: PlayerRegistry) {}
+	public constructor(
+		private components: Components,
+		private playerRegistry: PlayerRegistry,
+		private turfService: TurfService,
+	) {}
 
 	public handleDamageBlock(gamePlayer: GamePlayerComponent, block: BasePart): void {
 		const hammerContext = this.validateHammerContext(gamePlayer);
@@ -29,7 +33,7 @@ export class BlockActionService {
 			return;
 		}
 
-		if (component.attributes.TeamColor !== gamePlayer.instance.TeamColor) {
+		if (component.attributes.TeamColor !== gamePlayer.team.TeamColor) {
 			warn(`${gamePlayer.instance.Name} tried to damage a block that is not their team color`);
 			this.playerRegistry.kickPlayer(gamePlayer.instance, "damaging a block that is not their team color");
 			return;
@@ -57,7 +61,10 @@ export class BlockActionService {
 
 		const [character, config] = hammerContext;
 
-		if (position !== BlockGrid.snapPosition(position) || !BlockGrid.isPositionInBounds(position)) {
+		if (
+			position !== BlockGrid.snapPosition(position) ||
+			!this.turfService.isPositionOnTurf(position, gamePlayer.team)
+		) {
 			warn(`${gamePlayer.instance.Name} tried to place a block at an invalid position`);
 			return false;
 		}
@@ -76,7 +83,8 @@ export class BlockActionService {
 			return false;
 		}
 
-		BlockGrid.placeBlock(position, gamePlayer.instance.TeamColor);
+		this.turfService.registerBlock(BlockGrid.placeBlock(position, gamePlayer.team.TeamColor));
+
 		return true;
 	}
 

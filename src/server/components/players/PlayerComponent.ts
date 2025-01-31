@@ -3,11 +3,13 @@ import { Flamework, OnStart } from "@flamework/core";
 import { Events } from "server/network";
 import { CharacterType, HumanoidCharacterInstance } from "shared/types/characterTypes";
 
+const isHumanoidCharacter = Flamework.createGuard<HumanoidCharacterInstance>();
+
 @Component()
 export abstract class PlayerComponent extends BaseComponent<{}, Player> implements OnStart {
 	protected abstract readonly characterType: CharacterType;
 
-	private readonly isHumanoidCharacter = Flamework.createGuard<HumanoidCharacterInstance>();
+	public readonly team: Team;
 
 	public get isAlive(): boolean {
 		return this._isAlive;
@@ -15,11 +17,19 @@ export abstract class PlayerComponent extends BaseComponent<{}, Player> implemen
 	private set isAlive(value: boolean) {
 		this._isAlive = value;
 	}
-
 	private _isAlive: boolean = false;
 
 	protected backpack?: Backpack;
 	protected character?: HumanoidCharacterInstance;
+
+	public constructor() {
+		super();
+
+		if (!this.instance.Team) {
+			error(`${this.instance.Name} does not have a team`);
+		}
+		this.team = this.instance.Team;
+	}
 
 	public onStart(): void {
 		this.instance.CharacterAdded.Connect((character) => this.onCharacterAdded(character));
@@ -55,7 +65,7 @@ export abstract class PlayerComponent extends BaseComponent<{}, Player> implemen
 	}
 
 	private setupCharacter(character: Model): void {
-		if (!this.isHumanoidCharacter(character)) {
+		if (!isHumanoidCharacter(character)) {
 			warn(`${this.instance.Name} does not have a humanoid character`);
 			return;
 		}

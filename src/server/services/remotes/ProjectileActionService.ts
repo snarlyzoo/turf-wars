@@ -2,7 +2,7 @@ import { Service } from "@flamework/core";
 import { Players, Workspace } from "@rbxts/services";
 import { GamePlayerComponent } from "server/components/players";
 import { Events, ORIGIN_ERROR_TOLERANCE, PING_ERROR_TOLERANCE } from "server/network";
-import { PlayerRegistry } from "server/services";
+import { PlayerRegistry, TurfService } from "server/services";
 import { Physics } from "shared/modules";
 import { ProjectileHitType, ProjectileRecord } from "shared/types/projectileTypes";
 import { ToolType } from "shared/types/toolTypes";
@@ -11,7 +11,7 @@ import { ToolType } from "shared/types/toolTypes";
 export class ProjectileActionService {
 	private readonly Blocks = Workspace.FindFirstChild("Blocks") as Folder;
 
-	public constructor(private playerRegistry: PlayerRegistry) {}
+	public constructor(private playerRegistry: PlayerRegistry, private turfService: TurfService) {}
 
 	public handleFireProjectile(
 		gamePlayer: GamePlayerComponent,
@@ -134,7 +134,7 @@ export class ProjectileActionService {
 				warn(`${gamePlayer.instance.Name} registered a block projectile hit on a non-block part`);
 				return;
 			}
-			if (hitPart.BrickColor === gamePlayer.instance.TeamColor) {
+			if (hitPart.BrickColor === gamePlayer.team.TeamColor) {
 				warn(`${gamePlayer.instance.Name} registered a block projectile hit on a friendly block`);
 				return;
 			}
@@ -149,7 +149,7 @@ export class ProjectileActionService {
 				return;
 			}
 			const player = Players.GetPlayerFromCharacter(hitParent);
-			if (player && player.Team === gamePlayer.instance.Team) {
+			if (player && player.Team === gamePlayer.team) {
 				warn(`${gamePlayer.instance.Name} registered a character projectile hit on a friendly player`);
 				return;
 			}
@@ -159,6 +159,8 @@ export class ProjectileActionService {
 			print(`${gamePlayer.instance.Name}'s projectile hit ${hitParent.Name} for ${math.round(damage)} damage`);
 
 			if (humanoid.Health <= 0) {
+				this.turfService.registerKill(gamePlayer.team);
+
 				print(`${gamePlayer.instance.Name} killed ${hitParent.Name}`);
 			}
 		}
