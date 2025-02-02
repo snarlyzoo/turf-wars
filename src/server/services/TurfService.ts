@@ -1,11 +1,11 @@
-import { OnTick, Service } from "@flamework/core";
-import { Players } from "@rbxts/services";
+import { Service } from "@flamework/core";
 import { Events } from "server/network";
 import { BlockGrid } from "shared/modules";
+import { HumanoidCharacterInstance } from "shared/types/characterTypes";
 import { GameMap, TeamSpawn } from "shared/types/workspaceTypes";
 
 @Service()
-export class TurfService implements OnTick {
+export class TurfService {
 	private readonly OUT_OF_BOUNDS_KICK = new Vector3(75, 25, 0);
 
 	private team1?: Team;
@@ -33,18 +33,16 @@ export class TurfService implements OnTick {
 
 		this.outOfBoundsPlayers.clear();
 
+		BlockGrid.clear();
+
 		this.turfLines.forEach(
-			(turfLine, index) => (turfLine.BrickColor = index <= this.team1Turf ? team1.TeamColor : team2.TeamColor),
+			(turfLine, index) => (turfLine.BrickColor = index < this.team1Turf ? team1.TeamColor : team2.TeamColor),
 		);
 
 		this.setupTeamSpawn(gameMap.Team1Spawn, team1.TeamColor);
 		this.setupTeamSpawn(gameMap.Team2Spawn, team2.TeamColor);
 
 		Events.TurfChanged.broadcast(this.team1Turf);
-	}
-
-	public onTick(): void {
-		this.enforceTurfBoundaries();
 	}
 
 	public registerBlock(block: BasePart): void {
@@ -69,11 +67,49 @@ export class TurfService implements OnTick {
 	}
 
 	public isPositionOnTurf(position: Vector3, team: Team): boolean {
+		return this.isPositionValid(position, team);
+	}
+
+	public isOnCorrectSide(position: Vector3, team: Team): boolean {
+		return this.isPositionValid(position, team, false);
+	}
+
+	public kickCharacterBackToTurf(character: HumanoidCharacterInstance, team: Team): void {
+		if (!this.validateTeams()) return;
+
+		let kickDirection: Vector3;
+		if (team === this.team1) {
+			kickDirection = new Vector3(-1, 0, 0);
+		} else if (team === this.team2) {
+			kickDirection = new Vector3(1, 0, 0);
+		} else {
+			warn(`${team.Name} is not a valid team`);
+			return;
+		}
+
+		character.PivotTo(character.GetPivot().add(new Vector3(0, BlockGrid.BLOCK_SIZE, 0)));
+		character.HumanoidRootPart.AssemblyLinearVelocity = this.OUT_OF_BOUNDS_KICK.mul(kickDirection);
+	}
+
+	public setTurfPerKill(turfPerKill: number): void {
+		this.turfPerKill = turfPerKill;
+	}
+
+	private validateTeams(): boolean {
 		if (!this.team1 || !this.team2) {
 			warn("Teams have not been set");
 			return false;
 		}
-		if (!BlockGrid.isPositionInBounds(position)) return false;
+		return true;
+	}
+
+	private getTurfDivider(): number {
+		return BlockGrid.MIN_BOUNDS.X + (this.team1Turf + 0.5) * BlockGrid.BLOCK_SIZE;
+	}
+
+	private isPositionValid(position: Vector3, team: Team, checkGridBounds: boolean = true): boolean {
+		if (!this.validateTeams()) return false;
+		if (checkGridBounds && !BlockGrid.isPositionInBounds(position)) return false;
 
 		if (team === this.team1) {
 			return position.X < this.getTurfDivider();
@@ -85,28 +121,22 @@ export class TurfService implements OnTick {
 		}
 	}
 
-	public setTurfPerKill(turfPerKill: number): void {
-		this.turfPerKill = turfPerKill;
-	}
-
 	private claimTurf(team: Team): void {
-		if (!this.team1 || !this.team2) {
-			warn("Teams have not been set");
-			return;
-		}
+		if (!this.validateTeams()) return;
 		if (!this.turfLines) {
 			warn("Turf lines have not been set");
 			return;
 		}
 
-		let start, finish, step, teamColor;
+		let start: number, finish: number, step: number;
+		let teamColor: BrickColor;
 		if (team === this.team1) {
-			start = this.team1Turf + 1;
+			start = this.team1Turf;
 			finish = math.min(this.team1Turf + this.turfPerKill, BlockGrid.DIMENSIONS.X);
 			step = 1;
 			teamColor = this.team1.TeamColor;
 		} else if (team === this.team2) {
-			start = this.team1Turf;
+			start = this.team1Turf - 1;
 			finish = math.max(this.team1Turf - this.turfPerKill, 0);
 			step = -1;
 			teamColor = this.team2.TeamColor;
@@ -115,7 +145,7 @@ export class TurfService implements OnTick {
 			return;
 		}
 
-		for (let i = start; step > 0 ? i <= finish : i >= finish; i += step) {
+		for (let i = start; step > 0 ? i < finish : i >= finish; i += step) {
 			const blocks = this.blocksOnTurfLine.get(i) || [];
 			blocks.forEach((block) => block.Destroy());
 			this.blocksOnTurfLine.delete(i);
@@ -123,51 +153,15 @@ export class TurfService implements OnTick {
 			this.turfLines[i].BrickColor = teamColor;
 		}
 
-		print(`${team.Name} claimed ${math.abs(finish - start)} turf lines`);
+		print(`${team.Name} claimed ${step > 0 ? finish - start : start - finish + 1} turf lines`);
 
 		if (finish === 0 || finish === BlockGrid.DIMENSIONS.X) {
-			print(`${team.Name} has won!`);
-			// TODO: End the game
+			print(`${team.Name} has won`);
+			// TODO: End the round
 		}
+
 		this.team1Turf = finish;
-
 		Events.TurfChanged.broadcast(this.team1Turf);
-	}
-
-	private enforceTurfBoundaries(): void {
-		if (!this.team1 || !this.team2) return;
-
-		Players.GetPlayers().forEach((player) => {
-			const isTeam1 = player.Team === this.team1;
-			if (!isTeam1 && player.Team !== this.team2) return;
-
-			const character = player.Character;
-			if (!character || !character.PrimaryPart) {
-				this.outOfBoundsPlayers.delete(player.UserId);
-				return;
-			}
-
-			const charCFrame = character.GetPivot();
-			const charPosX = charCFrame.Position.X;
-			if (isTeam1 ? charPosX >= this.getTurfDivider() : charPosX < this.getTurfDivider()) {
-				if (!this.outOfBoundsPlayers.has(player.UserId)) {
-					this.outOfBoundsPlayers.add(player.UserId);
-
-					character.PivotTo(charCFrame.add(new Vector3(0, BlockGrid.BLOCK_SIZE, 0)));
-					character.PrimaryPart.AssemblyLinearVelocity = this.OUT_OF_BOUNDS_KICK.mul(
-						new Vector3(isTeam1 ? -1 : 1, 1, 1),
-					);
-
-					print(`${player.Name} was kicked back to their turf`);
-				}
-			} else {
-				this.outOfBoundsPlayers.delete(player.UserId);
-			}
-		});
-	}
-
-	private getTurfDivider(): number {
-		return BlockGrid.MIN_BOUNDS.X + (this.team1Turf + 0.5) * BlockGrid.BLOCK_SIZE;
 	}
 
 	private setupTeamSpawn(teamSpawn: TeamSpawn, teamColor: BrickColor): void {
@@ -178,7 +172,7 @@ export class TurfService implements OnTick {
 				spawn.TeamColor = teamColor;
 			});
 
-		teamSpawn.TeamColorParts.GetChildren()
+		[...teamSpawn.SpawnBarriers.GetChildren(), ...teamSpawn.TeamColorParts.GetChildren()]
 			.filter((child) => child.IsA("BasePart"))
 			.forEach((part) => (part.BrickColor = teamColor));
 	}

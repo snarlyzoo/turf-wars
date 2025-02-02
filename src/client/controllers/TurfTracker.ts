@@ -10,7 +10,7 @@ export class TurfTracker implements OnStart {
 	private team1Turf: number = 0;
 
 	public onStart(): void {
-		Events.RoundStarted.connect((team1, team2) => this.initialize(team1, team2));
+		Events.RoundStarting.connect((team1, team2) => this.initialize(team1, team2));
 		Events.TurfChanged.connect((team1Turf) => (this.team1Turf = team1Turf));
 	}
 
@@ -19,6 +19,10 @@ export class TurfTracker implements OnStart {
 		this.team2 = team2;
 
 		this.team1Turf = BlockGrid.DIMENSIONS.X / 2;
+	}
+
+	private getTurfDivider(): number {
+		return BlockGrid.MIN_BOUNDS.X + (this.team1Turf + 0.5) * BlockGrid.BLOCK_SIZE;
 	}
 
 	public isPositionOnTurf(position: Vector3, team: Team): boolean {
@@ -36,9 +40,5 @@ export class TurfTracker implements OnStart {
 			warn(`${team.Name} is not a valid team`);
 			return false;
 		}
-	}
-
-	private getTurfDivider(): number {
-		return BlockGrid.MIN_BOUNDS.X + (this.team1Turf + 0.5) * BlockGrid.BLOCK_SIZE;
 	}
 }

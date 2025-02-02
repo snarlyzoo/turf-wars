@@ -55,6 +55,10 @@ export abstract class BlockGrid {
 		return X >= minX && X <= maxX && Y >= minY && Y <= maxY && Z >= minZ && Z <= maxZ;
 	}
 
+	public static clear(): void {
+		this.Folder.ClearAllChildren();
+	}
+
 	private static snapAxis(value: number): number {
 		return math.floor(value / this.BLOCK_SIZE) * this.BLOCK_SIZE + this.BLOCK_SIZE / 2;
 	}

@@ -26,7 +26,7 @@ interface ClientToServerEvents {
 }
 
 interface ServerToClientEvents {
-	RoundStarted(team1: Team, team2: Team): void;
+	RoundStarting(team1: Team, team2: Team): void;
 	TurfChanged(team1Turf: number): void;
 
 	ConstructCharacterComponent(characterType: CharacterType): void;

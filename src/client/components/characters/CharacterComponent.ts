@@ -87,6 +87,8 @@ export abstract class CharacterComponent
 		super.destroy();
 	}
 
+	public sneak(toSneak: boolean): void {}
+
 	private fetchPlayerObjects(): void {
 		const camera = Workspace.CurrentCamera;
 		if (!camera) error("Missing camera in workspace");

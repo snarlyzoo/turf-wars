@@ -1,11 +1,11 @@
 import { Flamework, OnStart, Service } from "@flamework/core";
 import { Players, RunService, ServerStorage, Teams, Workspace } from "@rbxts/services";
 import Signal from "@rbxts/signal";
-import { PlayerRegistry, TurfService } from ".";
+import { Events } from "server/network";
 import { CharacterType } from "shared/types/characterTypes";
 import { GameMap } from "shared/types/workspaceTypes";
-import { Events } from "server/network";
 import { BlockGrid } from "shared/modules";
+import { PlayerRegistry, TurfService } from ".";
 
 enum GameState {
 	WaitingForPlayers = "Waiting for Players",
@@ -39,7 +39,9 @@ function fisherYatesShuffle<T>(array: T[]): T[] {
 @Service()
 export class RoundManager implements OnStart {
 	private readonly MIN_PLAYER_COUNT: number = 2;
-	private readonly INTERMISSION_TIME: number = 30;
+
+	private readonly INTERMISSION_TIME: number = 60;
+	private readonly ROUND_START_COUNTDOWN: number = 10;
 
 	private readonly PHASE_SEQUENCE: Phase[] = [
 		{ Type: PhaseType.Build, Duration: 40 },
@@ -61,10 +63,8 @@ export class RoundManager implements OnStart {
 	private set state(value: GameState) {
 		this._state = value;
 	}
-
 	private _state: GameState = GameState.WaitingForPlayers;
 
-	private timer?: thread;
 	private phaseIndex: number = 0;
 
 	private players: Set<Player> = new Set();
@@ -76,18 +76,14 @@ export class RoundManager implements OnStart {
 
 	public constructor(private playerRegistry: PlayerRegistry, private turfService: TurfService) {
 		const map = ServerStorage.FindFirstChild("Map");
-		if (!map || !isGameMap(map)) {
-			error("No valid map found in server storage");
-		}
+		if (!map || !isGameMap(map)) error("No valid map found in server storage");
 		this.GAME_MAP_PREFAB = map;
 
 		if (RunService.IsStudio()) {
 			this.MIN_PLAYER_COUNT = 1;
 			this.INTERMISSION_TIME = 2;
-			this.PHASE_SEQUENCE = [
-				{ Type: PhaseType.Build, Duration: 5 },
-				{ Type: PhaseType.Combat, Duration: 60 },
-			];
+			this.ROUND_START_COUNTDOWN = 2;
+			this.PHASE_SEQUENCE = [{ Type: PhaseType.Combat, Duration: 60 }];
 		}
 	}
 
@@ -96,84 +92,50 @@ export class RoundManager implements OnStart {
 		Players.PlayerRemoving.Connect((player) => this.onPlayerRemoving(player));
 	}
 
-	private changeState(newState: GameState): void {
-		if (this.state === newState) {
-			return;
-		}
-
-		print(`Changing state to ${newState}`);
-
-		if (this.timer) {
-			if (coroutine.status(this.timer) === "suspended") {
-				coroutine.close(this.timer);
-			}
-			this.timer = undefined;
-		}
-
-		this.state = newState;
-		this.StateChanged.Fire(newState);
-	}
-
-	private startIntermission(): void {
+	private async startIntermission(): Promise<void> {
 		this.changeState(GameState.Intermission);
-
-		this.timer = task.delay(this.INTERMISSION_TIME, () => {
-			this.startRound();
-		});
+		await this.delay(this.INTERMISSION_TIME);
+		await this.startRound();
 	}
 
 	private async startRound(): Promise<void> {
-		if (this.state !== GameState.Intermission) {
-			return;
-		}
+		if (this.state !== GameState.Intermission) return;
 
 		this.changeState(GameState.PreRound);
 
 		print("Loading game map...");
 
-		this.gameMap?.Destroy();
-		this.gameMap = this.GAME_MAP_PREFAB.Clone();
-		this.gameMap.Parent = Workspace;
-		if (!(await this.waitForGameMap(this.gameMap))) {
-			error("Failed to load game map");
-		}
+		await this.loadGameMap();
+		if (!this.gameMap) error("Failed to load game map");
 
 		print("Game map loaded");
 
 		this.turfService.initialize(this.team1, this.team2, this.gameMap);
 
 		Players.GetPlayers().forEach((player) => this.players.add(player));
-
 		this.shuffleTeams();
-		this.setPlayerComponents(CharacterType.Game);
+		await this.setPlayerComponents(CharacterType.Game);
 
-		Events.RoundStarted.broadcast(this.team1, this.team2);
+		Events.RoundStarting.broadcast(this.team1, this.team2);
+
+		await this.delay(this.ROUND_START_COUNTDOWN);
 
 		this.changeState(GameState.InRound);
-		this.setPhaseIndex(0);
+		this.disableSpawnBarriers(this.gameMap);
+
+		await this.runPhase(0);
 	}
-	private endRound(): void {
-		if (this.state === GameState.PreRound) {
-			this.StateChanged.Wait();
-		}
-		if (this.state !== GameState.InRound) {
+
+	private async runPhase(index: number): Promise<void> {
+		if (this.state !== GameState.InRound) return;
+
+		if (index >= this.PHASE_SEQUENCE.size()) {
+			await this.endRound();
 			return;
 		}
 
-		this.changeState(GameState.PostRound);
-
-		this.players.forEach((player) => (player.Team = this.SPECTATOR_TEAM));
-		this.setPlayerComponents(CharacterType.Lobby);
-
-		this.players.clear();
-
-		this.checkPlayerCount();
-	}
-
-	private setPhaseIndex(index: number): void {
 		this.phaseIndex = index;
-
-		const phase = this.PHASE_SEQUENCE[index];
+		const phase = this.PHASE_SEQUENCE[this.phaseIndex];
 
 		const isCombat = phase.Type === PhaseType.Combat;
 		if (isCombat) {
@@ -183,46 +145,91 @@ export class RoundManager implements OnStart {
 
 		print(`Starting ${phase.Type} phase ${index + 1}`);
 
-		this.timer = task.delay(phase.Duration, () => {
-			if (this.phaseIndex < this.PHASE_SEQUENCE.size() - 1) {
-				this.setPhaseIndex(this.phaseIndex + 1);
-			} else {
-				this.endRound();
-			}
-		});
+		await this.delay(phase.Duration);
+		await this.runPhase(index + 1);
 	}
 
-	private async waitForGameMap(map: GameMap): Promise<boolean> {
+	private async endRound(): Promise<void> {
+		if (this.state === GameState.PreRound) await this.waitForStateChange();
+		if (this.state !== GameState.InRound) return;
+
+		this.changeState(GameState.PostRound);
+
+		this.players.forEach((player) => (player.Team = this.SPECTATOR_TEAM));
+		await this.setPlayerComponents(CharacterType.Lobby);
+		this.players.clear();
+
+		this.checkPlayerCount();
+	}
+
+	private changeState(newState: GameState): void {
+		if (this.state === newState) return;
+
+		print(`Changing state to ${newState}`);
+
+		this.state = newState;
+		this.StateChanged.Fire(newState);
+	}
+
+	private async waitForStateChange(): Promise<GameState> {
+		return new Promise((resolve) => this.StateChanged.Once((newState) => resolve(newState)));
+	}
+
+	private isMapReady(map: GameMap): boolean {
+		return (
+			map.TurfLines !== undefined &&
+			map.Team1Spawn !== undefined &&
+			map.Team2Spawn !== undefined &&
+			map.TurfLines.GetChildren().size() >= BlockGrid.DIMENSIONS.X &&
+			map.Team1Spawn.SpawnBarriers !== undefined &&
+			map.Team1Spawn.SpawnLocations !== undefined &&
+			map.Team2Spawn.SpawnBarriers !== undefined &&
+			map.Team2Spawn.SpawnLocations !== undefined
+		);
+	}
+
+	private async loadGameMap(): Promise<void> {
+		this.gameMap?.Destroy();
+
+		const map = this.GAME_MAP_PREFAB.Clone();
+		map.Parent = Workspace;
+
 		const start = os.clock();
-
 		while (os.clock() - start < this.MAP_LOAD_TIMEOUT) {
-			if (!map.TurfLines || !map.Team1Spawn || !map.Team2Spawn) {
-				task.wait(0.1);
-				continue;
+			if (this.isMapReady(map)) {
+				this.gameMap = map;
+				return;
 			}
-
-			if (map.TurfLines.GetChildren().size() < BlockGrid.DIMENSIONS.X) {
-				task.wait(0.1);
-				continue;
-			}
-
-			if (map.Team1Spawn.GetChildren().size() === 0 || map.Team2Spawn.GetChildren().size() === 0) {
-				task.wait(0.1);
-				continue;
-			}
-
-			return true;
+			await this.delay(0.1);
 		}
+	}
 
-		return false;
+	private disableSpawnBarriers(map: GameMap): void {
+		map.Team1Spawn.SpawnBarriers.GetChildren()
+			.filter((child) => child.IsA("BasePart"))
+			.forEach((barrier) => (barrier.CanCollide = false));
+		map.Team2Spawn.SpawnBarriers.GetChildren()
+			.filter((child) => child.IsA("BasePart"))
+			.forEach((barrier) => (barrier.CanCollide = false));
+	}
+
+	private async setPlayerComponents(characterType: CharacterType): Promise<void> {
+		await Promise.all(
+			[...this.players].map((player) => this.playerRegistry.setPlayerComponent(player, characterType)),
+		);
+	}
+
+	private shuffleTeams(): void {
+		let index = 0;
+		fisherYatesShuffle([...this.players]).forEach((player) => {
+			player.Team = index % 2 === 0 ? this.team1 : this.team2;
+			index++;
+		});
 	}
 
 	private removePlayerFromRound(player: Player): void {
 		this.players.delete(player);
-
-		if (this.players.size() < this.MIN_PLAYER_COUNT) {
-			this.endRound();
-		}
+		if (this.players.size() < this.MIN_PLAYER_COUNT) this.endRound();
 	}
 
 	private checkPlayerCount(): void {
@@ -235,25 +242,12 @@ export class RoundManager implements OnStart {
 		}
 	}
 
-	private async setPlayerComponents(characterType: CharacterType): Promise<void> {
-		const promises = [...this.players].map((player) =>
-			this.playerRegistry.setPlayerComponent(player, characterType),
-		);
-		await Promise.all(promises);
-	}
-
-	private shuffleTeams(): void {
-		let index = 0;
-		fisherYatesShuffle([...this.players]).forEach((player) => {
-			player.Team = index % 2 === 0 ? this.team1 : this.team2;
-			index++;
-		});
+	private delay(duration: number): Promise<void> {
+		return new Promise((resolve) => task.delay(duration, resolve));
 	}
 
 	private onPlayerAdded(): void {
-		if (this.state === GameState.WaitingForPlayers) {
-			this.checkPlayerCount();
-		}
+		if (this.state === GameState.WaitingForPlayers) this.checkPlayerCount();
 	}
 	private onPlayerRemoving(player: Player): void {
 		if (this.state === GameState.PreRound || this.state === GameState.InRound) {

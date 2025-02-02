@@ -1,10 +1,11 @@
 import { Component } from "@flamework/components";
 import { PlayerComponent } from "./PlayerComponent";
-import { Flamework } from "@flamework/core";
+import { Flamework, OnTick } from "@flamework/core";
 import { HammerConfig, SlingshotConfig, ToolInstance, ToolType } from "shared/types/toolTypes";
 import { ProjectileRecord } from "shared/types/projectileTypes";
 import { CharacterType, R15CharacterInstance, R6CharacterInstance } from "shared/types/characterTypes";
 import { findFirstChildWithTag, getHammerConfig, getSlingshotConfig } from "shared/utility";
+import { TurfService } from "server/services";
 
 type ToolConfigMap = {
 	[ToolType.Slingshot]: SlingshotConfig;
@@ -12,10 +13,12 @@ type ToolConfigMap = {
 };
 
 @Component()
-export class GamePlayerComponent extends PlayerComponent {
-	protected override characterType = CharacterType.Game;
+export class GamePlayerComponent extends PlayerComponent implements OnTick {
+	private readonly TURF_KICK_COOLDOWN = 0.5;
 
 	private readonly isToolInstance = Flamework.createGuard<ToolInstance>();
+
+	protected override characterType = CharacterType.Game;
 
 	public combatEnabled: boolean = false;
 
@@ -27,15 +30,25 @@ export class GamePlayerComponent extends PlayerComponent {
 	}
 	private _projectileRecords: Map<number, ProjectileRecord> = new Map();
 
+	private lastTurfKickTick: number = 0;
+
 	private toolJoint?: Motor6D;
 
 	private tools: Partial<Record<ToolType, ToolInstance>> = {};
 	private toolConfigs: Partial<ToolConfigMap> = {};
 	private curTool?: ToolInstance;
 
+	public constructor(private turfService: TurfService) {
+		super();
+	}
+
 	public override onStart(): void {
 		super.onStart();
 		this.instance.CharacterAppearanceLoaded.Connect(() => this.onCharacterAppearanceLoaded());
+	}
+
+	public onTick(): void {
+		this.enforceTurfBoundaries();
 	}
 
 	public getToolJoint(): Motor6D | undefined {
@@ -141,6 +154,18 @@ export class GamePlayerComponent extends PlayerComponent {
 
 		this.toolConfigs[ToolType.Slingshot] = getSlingshotConfig(slingshot.FindFirstChildOfClass("Configuration"));
 		this.toolConfigs[ToolType.Hammer] = getHammerConfig(hammer.FindFirstChildOfClass("Configuration"));
+	}
+
+	private enforceTurfBoundaries(): void {
+		if (!this.isAlive || !this.character) return;
+
+		const tick = os.clock();
+		if (tick - this.lastTurfKickTick < this.TURF_KICK_COOLDOWN) return;
+
+		if (!this.turfService.isOnCorrectSide(this.character.GetPivot().Position, this.team)) {
+			this.turfService.kickCharacterBackToTurf(this.character, this.team);
+			this.lastTurfKickTick = tick;
+		}
 	}
 
 	protected override onCharacterAdded(character: Model): void {

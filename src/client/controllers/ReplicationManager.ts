@@ -14,7 +14,6 @@ class ReplicationManager implements OnStart {
 
 	public onStart(): void {
 		Events.CharacterTiltChanged.connect((character, angle) => this.onCharacterTiltChanged(character, angle));
-
 		Events.ProjectileFired.connect((caster, projectileRecord) => this.onProjectileFired(caster, projectileRecord));
 	}
 

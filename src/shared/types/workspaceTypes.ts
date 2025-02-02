@@ -6,6 +6,7 @@ export interface GameMap extends Model {
 }
 
 export interface TeamSpawn extends Model {
+	SpawnBarriers: Folder;
 	SpawnLocations: Folder;
 	TeamColorParts: Folder;
 }
