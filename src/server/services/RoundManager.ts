@@ -79,12 +79,12 @@ export class RoundManager implements OnStart {
 		if (!map || !isGameMap(map)) error("No valid map found in server storage");
 		this.GAME_MAP_PREFAB = map;
 
-		/**if (RunService.IsStudio()) {
+		if (RunService.IsStudio()) {
 			this.MIN_PLAYER_COUNT = 1;
 			this.INTERMISSION_TIME = 2;
 			this.ROUND_START_COUNTDOWN = 2;
 			this.PHASE_SEQUENCE = [{ Type: PhaseType.Combat, Duration: 60 }];
-		}*/
+		}
 	}
 
 	public onStart(): void {

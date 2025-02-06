@@ -130,6 +130,7 @@ export abstract class CharacterComponent
 
 	public sneak(toSneak: boolean): void {
 		this.toSneak = toSneak;
+		print(toSneak ? "Sneaking" : "Not sneaking");
 	}
 
 	private fetchPlayerObjects(): void {
@@ -155,6 +156,7 @@ export abstract class CharacterComponent
 
 		this.groundController = new Instance("GroundController");
 		this.groundController.GroundOffset = this.instance.Humanoid.HipHeight;
+		this.groundController.FrictionWeight = 100;
 		this.groundController.Parent = this.controllerManager;
 
 		this.airController = new Instance("AirController");

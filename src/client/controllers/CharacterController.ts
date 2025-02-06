@@ -38,29 +38,29 @@ export class CharacterController implements OnStart {
 	private defaultInputActions: InputAction[] = [
 		{
 			actionName: DefaultAction.Sneak,
-			input: [Enum.KeyCode.LeftShift, Enum.KeyCode.ButtonL2],
+			input: [Enum.KeyCode.LeftShift, Enum.KeyCode.ButtonL3],
 			callback: (actionName, inputState): void => this.onSneak(actionName, inputState),
 		},
 	];
 	private gameInputActions: InputAction[] = [
 		{
 			actionName: GameAction.EquipPrimary,
-			input: [Enum.KeyCode.One],
+			input: [Enum.KeyCode.One, Enum.KeyCode.ButtonR1],
 			callback: (actionName, inputState): void => this.onEquipAction(actionName, inputState),
 		},
 		{
 			actionName: GameAction.EquipSecondary,
-			input: [Enum.KeyCode.Two],
+			input: [Enum.KeyCode.Two, Enum.KeyCode.ButtonL1],
 			callback: (actionName, inputState): void => this.onEquipAction(actionName, inputState),
 		},
 		{
 			actionName: GameAction.PrimaryToolAction,
-			input: [Enum.UserInputType.MouseButton1],
+			input: [Enum.UserInputType.MouseButton1, Enum.KeyCode.ButtonR2],
 			callback: (actionName, inputState): void => this.onToolAction(actionName, inputState),
 		},
 		{
 			actionName: GameAction.SecondaryToolAction,
-			input: [Enum.UserInputType.MouseButton2],
+			input: [Enum.UserInputType.MouseButton2, Enum.KeyCode.ButtonL2],
 			callback: (actionName, inputState): void => this.onToolAction(actionName, inputState),
 		},
 	];

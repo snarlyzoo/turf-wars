@@ -77,6 +77,11 @@ export class HammerComponent extends ToolComponent implements OnRender {
 		this.targetIndicator.SelectionBox.Visible = true;
 	}
 
+	public override unequip(): void {
+		super.unequip();
+		this.targetIndicator.SelectionBox.Visible = false;
+	}
+
 	public override usePrimaryAction(toActivate: boolean): void {
 		this.damageBlock(toActivate);
 	}
