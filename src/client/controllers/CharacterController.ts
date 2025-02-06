@@ -1,6 +1,6 @@
 import { Components } from "@flamework/components";
 import { Controller, OnStart } from "@flamework/core";
-import { ContextActionService, Players } from "@rbxts/services";
+import { ContextActionService, Players, UserInputService } from "@rbxts/services";
 import { CharacterComponent, GameCharacterComponent, LobbyCharacterComponent } from "client/components/characters";
 import { Events } from "client/network";
 import { CHARACTER_EVENT_RATE_LIMIT, TOOL_EVENT_RATE_LIMIT } from "shared/network";
@@ -38,7 +38,7 @@ export class CharacterController implements OnStart {
 	private defaultInputActions: InputAction[] = [
 		{
 			actionName: DefaultAction.Sneak,
-			input: [Enum.KeyCode.LeftShift],
+			input: [Enum.KeyCode.LeftShift, Enum.KeyCode.ButtonL2],
 			callback: (actionName, inputState): void => this.onSneak(actionName, inputState),
 		},
 	];
@@ -74,6 +74,8 @@ export class CharacterController implements OnStart {
 		Events.SetCombatEnabled.connect((enabled) => this.onSetCombatEnabled(enabled));
 
 		this.player.CharacterRemoving.Connect((character) => this.onCharacterRemoving(character));
+
+		UserInputService.JumpRequest.Connect(() => this.onJumpRequest());
 	}
 
 	private bindInputActions(inputActions: InputAction[]): void {
@@ -94,8 +96,7 @@ export class CharacterController implements OnStart {
 	}
 
 	private getGameCharacter(): GameCharacterComponent | undefined {
-		if (this.characterComponent instanceof GameCharacterComponent) return this.characterComponent;
-		return undefined;
+		return this.characterComponent instanceof GameCharacterComponent ? this.characterComponent : undefined;
 	}
 
 	private onConstructCharacterComponent(characterType: CharacterType): void {
@@ -142,6 +143,12 @@ export class CharacterController implements OnStart {
 		this.unbindInputActions(this.defaultInputActions);
 
 		this.characterComponent = undefined;
+	}
+
+	private onJumpRequest(): void {
+		if (!this.characterComponent) return;
+
+		this.characterComponent.jump();
 	}
 
 	private onSneak(actionName: string, inputState: Enum.UserInputState): void {
