@@ -1,9 +1,6 @@
 {
-	"name": "flamework-game",
-	"globIgnorePaths": [
-		"**/package.json",
-		"**/tsconfig.json"
-	],
+	"name": "turf-wars",
+	"globIgnorePaths": ["**/package.json", "**/tsconfig.json"],
 	"tree": {
 		"$className": "DataModel",
 		"ServerScriptService": {
@@ -28,7 +25,8 @@
 			},
 			"TS": {
 				"$path": "out/shared"
-			}
+			},
+			"$ignoreUnknownInstances": true
 		},
 		"StarterPlayer": {
 			"$className": "StarterPlayer",
