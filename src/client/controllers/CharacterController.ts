@@ -1,6 +1,6 @@
 import { Components } from "@flamework/components";
 import { Controller, OnStart } from "@flamework/core";
-import { ContextActionService, Players, UserInputService } from "@rbxts/services";
+import { ContextActionService, Players } from "@rbxts/services";
 import { CharacterComponent, GameCharacterComponent, LobbyCharacterComponent } from "client/components/characters";
 import { Events } from "client/network";
 import { CHARACTER_EVENT_RATE_LIMIT, TOOL_EVENT_RATE_LIMIT } from "shared/network";
@@ -31,9 +31,10 @@ interface InputAction {
 export class CharacterController implements OnStart {
 	public readonly player: Player = Players.LocalPlayer;
 
-	private combatEnabled: boolean = false;
-
+	private characterType: CharacterType = CharacterType.Lobby;
 	private characterComponent?: CharacterComponent;
+
+	private combatEnabled: boolean = false;
 
 	private lastCharacterEventTick: number = 0;
 	private lastToolEventTick: number = 0;
@@ -42,7 +43,7 @@ export class CharacterController implements OnStart {
 		{
 			actionName: DefaultAction.Sneak,
 			input: [Enum.KeyCode.LeftShift, Enum.KeyCode.ButtonL3],
-			callback: (actionName, inputState): void => this.onSneak(actionName, inputState),
+			callback: (_, inputState): void => this.onSneak(inputState),
 		},
 	];
 	private gameInputActions: InputAction[] = [
@@ -81,14 +82,11 @@ export class CharacterController implements OnStart {
 	public constructor(private components: Components) {}
 
 	public onStart(): void {
-		Events.ConstructCharacterComponent.connect((characterType) =>
-			this.onConstructCharacterComponent(characterType),
-		);
+		Events.SetCharacterType.connect((characterType) => (this.characterType = characterType));
 		Events.SetCombatEnabled.connect((enabled) => this.onSetCombatEnabled(enabled));
 
+		this.player.CharacterAdded.Connect((character) => this.onCharacterAdded(character));
 		this.player.CharacterRemoving.Connect((character) => this.onCharacterRemoving(character));
-
-		UserInputService.JumpRequest.Connect(() => this.onJumpRequest());
 	}
 
 	private bindInputActions(inputActions: InputAction[]): void {
@@ -112,29 +110,30 @@ export class CharacterController implements OnStart {
 		return this.characterComponent instanceof GameCharacterComponent ? this.characterComponent : undefined;
 	}
 
-	private onConstructCharacterComponent(characterType: CharacterType): void {
-		const character = this.player.Character;
-		if (!character) {
-			warn("Local player does not have a character");
-			return;
-		}
+	private onCharacterAdded(character: Model): void {
+		print("Character added");
 		character.WaitForChild("HumanoidRootPart");
 
-		print(`Constructing ${characterType} character component...`);
+		print(`Constructing ${this.characterType} character component...`);
 
 		let characterComponent: CharacterComponent;
-		if (characterType === CharacterType.Game) {
-			characterComponent = this.components.addComponent<GameCharacterComponent>(character);
-			(characterComponent as GameCharacterComponent).combatEnabled = this.combatEnabled;
-			this.bindInputActions(this.gameInputActions);
-		} else {
-			characterComponent = this.components.addComponent<LobbyCharacterComponent>(character);
+		switch (this.characterType) {
+			case CharacterType.Game:
+				characterComponent = this.components.addComponent<GameCharacterComponent>(character);
+				(characterComponent as GameCharacterComponent).combatEnabled = this.combatEnabled;
+				this.bindInputActions(this.gameInputActions);
+				break;
+			case CharacterType.Lobby:
+				characterComponent = this.components.addComponent<LobbyCharacterComponent>(character);
+				break;
+			default:
+				error(`Invalid character type: ${this.characterType}`);
 		}
 		this.characterComponent = characterComponent;
 
 		this.bindInputActions(this.defaultInputActions);
 
-		print(`${characterType} character component constructed`);
+		print(`${this.characterType} character component constructed`);
 	}
 
 	private onSetCombatEnabled(enabled: boolean): void {
@@ -158,13 +157,7 @@ export class CharacterController implements OnStart {
 		this.characterComponent = undefined;
 	}
 
-	private onJumpRequest(): void {
-		if (!this.characterComponent) return;
-
-		this.characterComponent.jump();
-	}
-
-	private onSneak(actionName: string, inputState: Enum.UserInputState): void {
+	private onSneak(inputState: Enum.UserInputState): void {
 		if (!this.characterComponent) return;
 
 		if (inputState === Enum.UserInputState.Begin) {

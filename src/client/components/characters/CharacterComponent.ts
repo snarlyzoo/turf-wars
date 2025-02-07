@@ -1,5 +1,5 @@
 import { Component, Components } from "@flamework/components";
-import { OnPhysics, OnStart, OnTick } from "@flamework/core";
+import { OnStart, OnTick } from "@flamework/core";
 import { Workspace } from "@rbxts/services";
 import { TiltCharacterComponent } from "client/components/characters/addons";
 import { CharacterController } from "client/controllers";
@@ -11,15 +11,10 @@ import { HumanoidCharacterInstance } from "shared/types/characterTypes";
 @Component()
 export abstract class CharacterComponent
 	extends DisposableComponent<{}, HumanoidCharacterInstance>
-	implements OnStart, OnTick, OnPhysics
+	implements OnStart, OnTick
 {
 	protected abstract readonly CAMERA_MODE: Enum.CameraMode;
 	private readonly FIELD_OF_VIEW: number = 90;
-
-	private readonly JUMP_IMPULSE: Vector3 = new Vector3(0, 250, 0);
-
-	private readonly FLOOR_SENSOR_SEARCH_DISTANCE: number = 0.5;
-	private readonly FLOOR_SENSOR_RESET_DELAY: number = 0.1;
 
 	public readonly player: Player;
 	public readonly team: Team;
@@ -55,11 +50,6 @@ export abstract class CharacterComponent
 
 	private toSneak: boolean = false;
 
-	private controllerManager!: ControllerManager;
-	private groundController!: GroundController;
-	private airController!: AirController;
-	private floorSensor!: ControllerPartSensor;
-
 	private tiltCharacter!: TiltCharacterComponent;
 
 	public constructor(characterController: CharacterController, protected components: Components) {
@@ -76,8 +66,6 @@ export abstract class CharacterComponent
 	public onStart(): void {
 		this.fetchPlayerObjects();
 		this.initializeCamera();
-
-		this.constructControllerManager();
 
 		this.constructTiltCharacter();
 
@@ -96,43 +84,9 @@ export abstract class CharacterComponent
 		this.tiltAccumulator += dt;
 	}
 
-	public onPhysics(dt: number): void {
-		if (!this.isAlive) return;
-
-		const moveDirection = this.instance.Humanoid.MoveDirection;
-		this.controllerManager.MovingDirection = moveDirection;
-		this.controllerManager.FacingDirection =
-			moveDirection.Magnitude > 0 ? moveDirection : this.instance.GetPivot().LookVector;
-
-		if (this.checkRunningState()) {
-			this.controllerManager.ActiveController = this.groundController;
-			this.instance.Humanoid.ChangeState(Enum.HumanoidStateType.Running);
-		} else if (this.checkFreefallState()) {
-			this.controllerManager.ActiveController = this.airController;
-			this.instance.Humanoid.ChangeState(Enum.HumanoidStateType.Freefall);
-		}
-	}
-
 	public override destroy(): void {
 		if (this.isAlive) this.onDied();
 		super.destroy();
-	}
-
-	public jump(): void {
-		if (!this.isAlive) return;
-
-		if (!this.isControllerActive(this.groundController)) return;
-
-		this.instance.HumanoidRootPart.ApplyImpulse(this.JUMP_IMPULSE);
-		this.instance.Humanoid.ChangeState(Enum.HumanoidStateType.Jumping);
-
-		const searchDistance = this.floorSensor.SearchDistance;
-		this.floorSensor.SearchDistance = 0;
-		task.delay(this.FLOOR_SENSOR_RESET_DELAY, () => {
-			if (this.floorSensor.SearchDistance === 0) this.floorSensor.SearchDistance = searchDistance;
-		});
-
-		this.controllerManager.ActiveController = this.airController;
 	}
 
 	public sneak(toSneak: boolean): void {
@@ -155,30 +109,6 @@ export abstract class CharacterComponent
 		this.camera.FieldOfView = this.FIELD_OF_VIEW;
 	}
 
-	private constructControllerManager(): void {
-		this.instance.Humanoid.EvaluateStateMachine = false;
-
-		this.controllerManager = new Instance("ControllerManager");
-		this.controllerManager.RootPart = this.instance.PrimaryPart;
-
-		this.groundController = new Instance("GroundController");
-		this.groundController.GroundOffset = this.instance.Humanoid.HipHeight;
-		this.groundController.FrictionWeight = 100;
-		this.groundController.Parent = this.controllerManager;
-
-		this.airController = new Instance("AirController");
-		this.airController.Parent = this.controllerManager;
-
-		this.floorSensor = new Instance("ControllerPartSensor");
-		this.floorSensor.Name = "FloorSensor";
-		this.floorSensor.SensorMode = Enum.SensorMode.Floor;
-		this.floorSensor.SearchDistance = this.groundController.GroundOffset + this.FLOOR_SENSOR_SEARCH_DISTANCE;
-		this.floorSensor.Parent = this.controllerManager.RootPart;
-
-		this.controllerManager.GroundSensor = this.floorSensor;
-		this.controllerManager.Parent = this.instance;
-	}
-
 	private constructTiltCharacter(): void {
 		print("Constructing tilt character component...");
 
@@ -199,26 +129,7 @@ export abstract class CharacterComponent
 		}
 	}
 
-	private isControllerActive(controller: ControllerBase): boolean {
-		return this.controllerManager.ActiveController === controller && controller.Active;
-	}
-
-	private checkRunningState(): boolean {
-		return (
-			this.floorSensor.SensedPart !== undefined &&
-			!this.isControllerActive(this.groundController) &&
-			this.instance.Humanoid.GetState() !== Enum.HumanoidStateType.Jumping
-		);
-	}
-
-	private checkFreefallState(): boolean {
-		return (
-			(this.floorSensor.SensedPart === undefined && !this.isControllerActive(this.airController)) ||
-			this.instance.Humanoid.GetState() === Enum.HumanoidStateType.Jumping
-		);
-	}
-
-	private onDied(): void {
+	protected onDied(): void {
 		this.isAlive = false;
 		this.janitor.Cleanup();
 	}

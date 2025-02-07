@@ -51,6 +51,11 @@ export class ViewmodelComponent
 		this.viewmodel.PivotTo(camCFrame.mul(this.cframeValue.Value).add(camCFrame.UpVector.mul(this.CAMERA_Y_OFFSET)));
 	}
 
+	public override destroy(): void {
+		this.viewmodel.Destroy();
+		super.destroy();
+	}
+
 	public async waitForViewmodel(): Promise<ViewmodelInstance> {
 		if (this.viewmodel) return this.viewmodel;
 

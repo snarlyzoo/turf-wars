@@ -141,6 +141,9 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 		this.tools.forEach((tool) => tool.initialize(this, this.viewmodel));
 
 		this.janitor.Add(() => {
+			this.unequip();
+			this.tools.clear();
+
 			this.components.removeComponent<HammerComponent>(hammer);
 			this.components.removeComponent<SlingshotComponent>(slingshot);
 		});

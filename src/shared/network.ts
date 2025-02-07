@@ -28,7 +28,7 @@ interface ServerToClientEvents {
 	RoundStarting(team1: Team, team2: Team): void;
 	TurfChanged(team1Turf: number): void;
 
-	ConstructCharacterComponent(characterType: CharacterType): void;
+	SetCharacterType(characterType: CharacterType): void;
 
 	CharacterTiltChanged: Networking.Unreliable<(character: HumanoidCharacterInstance, angle?: number) => void>;
 

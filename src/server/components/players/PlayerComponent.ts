@@ -34,6 +34,8 @@ export abstract class PlayerComponent extends BaseComponent<{}, Player> implemen
 	public onStart(): void {
 		this.instance.CharacterAdded.Connect((character) => this.onCharacterAdded(character));
 		this.instance.CharacterRemoving.Connect(() => this.onCharacterRemoving());
+
+		Events.SetCharacterType.fire(this.instance, this.characterType);
 	}
 
 	public getBackpack(): Backpack | undefined {
@@ -42,11 +44,6 @@ export abstract class PlayerComponent extends BaseComponent<{}, Player> implemen
 
 	public getCharacter(): HumanoidCharacterInstance | undefined {
 		return this.character;
-	}
-
-	public respawn(): void {
-		this.instance.LoadCharacter();
-		Events.ConstructCharacterComponent.fire(this.instance, this.characterType);
 	}
 
 	public updateTilt(angle?: number): void {

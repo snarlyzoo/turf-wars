@@ -90,16 +90,20 @@ export class GamePlayerComponent extends PlayerComponent implements OnTick {
 			return;
 		}
 
-		if (this.curTool) {
-			this.curTool.Parent = this.backpack;
-		}
-
-		toolJoint.Part1 = newTool.PrimaryPart;
-		newTool.Parent = this.character;
+		this.unequip();
 
 		this.curTool = newTool;
+		toolJoint.Part1 = this.curTool.PrimaryPart;
+		this.curTool.Parent = this.character;
 
 		this.updateTilt();
+	}
+
+	public unequip(): void {
+		if (!this.curTool) return;
+
+		this.curTool.Parent = this.backpack;
+		this.curTool = undefined;
 	}
 
 	private createToolJoint(): void {
@@ -171,6 +175,8 @@ export class GamePlayerComponent extends PlayerComponent implements OnTick {
 	protected override onDied(): void {
 		super.onDied();
 		this.combatEnabled = false;
+
+		this.unequip();
 
 		this.tools = {};
 		this.toolConfigs = {};

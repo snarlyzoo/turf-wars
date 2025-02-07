@@ -24,7 +24,7 @@ export class PlayerRegistry implements OnStart {
 		return this.playerComponents.get(player.UserId);
 	}
 
-	public setPlayerComponent(player: Player, characterType: CharacterType): void {
+	public setPlayerComponent(player: Player, characterType: CharacterType, loadCharacter: boolean = true): void {
 		print(`Constructing ${characterType} player component for ${player.Name}...`);
 
 		let playerComponent = this.getPlayerComponent(player);
@@ -39,7 +39,7 @@ export class PlayerRegistry implements OnStart {
 		}
 		this.playerComponents.set(player.UserId, playerComponent);
 
-		playerComponent.respawn();
+		if (loadCharacter) player.LoadCharacter();
 
 		print(`${characterType} player component constructed for ${player.Name}`);
 	}
@@ -77,7 +77,7 @@ export class PlayerRegistry implements OnStart {
 	}
 
 	private onPlayerAdded(player: Player): void {
-		this.setPlayerComponent(player, CharacterType.Lobby);
+		this.setPlayerComponent(player, CharacterType.Lobby, false);
 		this.kickOffenses.set(player.UserId, 0);
 	}
 	private onPlayerRemoving(player: Player): void {
