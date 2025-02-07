@@ -1,5 +1,5 @@
 import { Component, Components } from "@flamework/components";
-import { Flamework, OnPhysics, OnStart, OnTick } from "@flamework/core";
+import { OnPhysics, OnStart, OnTick } from "@flamework/core";
 import { Workspace } from "@rbxts/services";
 import { TiltCharacterComponent } from "client/components/characters/addons";
 import { CharacterController } from "client/controllers";
@@ -18,7 +18,8 @@ export abstract class CharacterComponent
 
 	private readonly JUMP_IMPULSE: Vector3 = new Vector3(0, 250, 0);
 
-	private readonly SENSOR_SEARCH_DISTANCE: number = 0.5;
+	private readonly FLOOR_SENSOR_SEARCH_DISTANCE: number = 0.5;
+	private readonly FLOOR_SENSOR_RESET_DELAY: number = 0.1;
 
 	public readonly player: Player;
 	public readonly team: Team;
@@ -125,6 +126,12 @@ export abstract class CharacterComponent
 		this.instance.HumanoidRootPart.ApplyImpulse(this.JUMP_IMPULSE);
 		this.instance.Humanoid.ChangeState(Enum.HumanoidStateType.Jumping);
 
+		const searchDistance = this.floorSensor.SearchDistance;
+		this.floorSensor.SearchDistance = 0;
+		task.delay(this.FLOOR_SENSOR_RESET_DELAY, () => {
+			if (this.floorSensor.SearchDistance === 0) this.floorSensor.SearchDistance = searchDistance;
+		});
+
 		this.controllerManager.ActiveController = this.airController;
 	}
 
@@ -165,7 +172,7 @@ export abstract class CharacterComponent
 		this.floorSensor = new Instance("ControllerPartSensor");
 		this.floorSensor.Name = "FloorSensor";
 		this.floorSensor.SensorMode = Enum.SensorMode.Floor;
-		this.floorSensor.SearchDistance = this.groundController.GroundOffset + this.SENSOR_SEARCH_DISTANCE;
+		this.floorSensor.SearchDistance = this.groundController.GroundOffset + this.FLOOR_SENSOR_SEARCH_DISTANCE;
 		this.floorSensor.Parent = this.controllerManager.RootPart;
 
 		this.controllerManager.GroundSensor = this.floorSensor;

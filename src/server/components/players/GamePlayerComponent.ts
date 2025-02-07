@@ -102,26 +102,6 @@ export class GamePlayerComponent extends PlayerComponent implements OnTick {
 		this.updateTilt();
 	}
 
-	public unequip(): void {
-		if (!this.curTool) {
-			warn(`${this.instance.Name} does not have a tool equipped`);
-			return;
-		}
-
-		const toolJoint = this.getToolJoint();
-		if (!toolJoint) {
-			warn(`${this.instance.Name} does not have a tool joint`);
-			return;
-		}
-
-		this.curTool.Parent = this.getBackpack();
-		toolJoint.Part1 = undefined;
-
-		this.curTool = undefined;
-
-		this.updateTilt();
-	}
-
 	private createToolJoint(): void {
 		if (!this.character) {
 			warn(`${this.instance.Name} does not have a character`);

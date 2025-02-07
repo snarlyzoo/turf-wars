@@ -7,7 +7,7 @@ import { TurfTracker } from "client/controllers/TurfTracker";
 import { Events, Functions } from "client/network";
 import { BlockComponent } from "shared/components";
 import { BlockGrid } from "shared/modules";
-import { HammerConfig } from "shared/types/toolTypes";
+import { HammerConfig, ToolType } from "shared/types/toolTypes";
 import { getHammerConfig } from "shared/utility";
 import { ToolComponent } from "./ToolComponent";
 
@@ -18,6 +18,8 @@ export class HammerComponent extends ToolComponent implements OnRender {
 	private readonly BLOCK_OVERLAP_SIZE: Vector3 = new Vector3(1, 1, 1).mul(BlockGrid.BLOCK_SIZE * 0.9);
 
 	private readonly Map: Model = Workspace.FindFirstChild("Map") as Model;
+
+	public override toolType = ToolType.Hammer;
 
 	private toDelete: boolean = false;
 

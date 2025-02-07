@@ -132,7 +132,7 @@ export class ViewmodelComponent
 		});
 
 		this.instance.Humanoid.StateChanged.Connect((_, newState) => {
-			if (newState === Enum.HumanoidStateType.Landed) {
+			if (newState === Enum.HumanoidStateType.Running) {
 				fallTween.Cancel();
 				landTween1.Play();
 			} else if (newState === Enum.HumanoidStateType.Freefall) {

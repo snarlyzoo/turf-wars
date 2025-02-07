@@ -10,7 +10,6 @@ import { ProjectileHitType } from "shared/types/projectileTypes";
 enum RemoteName {
 	UpdateCharacterTilt = "UpdateCharacterTilt",
 	EquipTool = "EquipTool",
-	UnequipCurrentTool = "UnequipCurrentTool",
 	FireProjectile = "FireProjectile",
 	RegisterProjectileHit = "RegisterProjectileHit",
 	DamageBlock = "DamageBlock",
@@ -29,7 +28,6 @@ class RemoteHandler implements OnStart {
 		Events.UpdateCharacterTilt.connect((player, angle) => this.handleUpdateCharacterTilt(player, angle));
 
 		Events.EquipTool.connect((player, toolType) => this.handleEquipTool(player, toolType));
-		Events.UnequipCurrentTool.connect((player) => this.handleUnequipCurrentTool(player));
 
 		Events.FireProjectile.connect((player, origin, direction, speed, timestamp) =>
 			this.handleFireProjectile(player, origin, direction, speed, timestamp),
@@ -69,12 +67,6 @@ class RemoteHandler implements OnStart {
 	private handleEquipTool(player: Player, toolType: ToolType): void {
 		this.usePlayerComponent(player, RemoteName.EquipTool, GamePlayerComponent, (gamePlayer) =>
 			gamePlayer.equipTool(toolType),
-		);
-	}
-
-	private handleUnequipCurrentTool(player: Player): void {
-		this.usePlayerComponent(player, RemoteName.UnequipCurrentTool, GamePlayerComponent, (gamePlayer) =>
-			gamePlayer.unequip(),
 		);
 	}
 

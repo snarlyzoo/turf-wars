@@ -12,7 +12,6 @@ interface ClientToServerEvents {
 	UpdateCharacterTilt: Networking.Unreliable<(angle: number) => void>;
 
 	EquipTool(toolType: ToolType): void;
-	UnequipCurrentTool(): void;
 
 	DamageBlock(block: BasePart): void;
 

@@ -6,12 +6,14 @@ import { Events } from "client/network";
 import { BlockComponent } from "shared/components";
 import { ProjectileCaster } from "shared/modules";
 import { Projectile, ProjectileHitType, ProjectileModifier } from "shared/types/projectileTypes";
-import { SlingshotConfig } from "shared/types/toolTypes";
+import { SlingshotConfig, ToolType } from "shared/types/toolTypes";
 import { getSlingshotConfig } from "shared/utility";
 import { ToolComponent } from "./ToolComponent";
 
 @Component()
 export class SlingshotComponent extends ToolComponent {
+	public override toolType = ToolType.Slingshot;
+
 	private toFire: boolean = false;
 
 	private teamColor!: BrickColor;

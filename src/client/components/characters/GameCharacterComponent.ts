@@ -1,6 +1,5 @@
 import { Component } from "@flamework/components";
 import { OnRender } from "@flamework/core";
-import Object from "@rbxts/object-utils";
 import { RunService } from "@rbxts/services";
 import { ViewmodelComponent } from "client/components/characters/addons";
 import { HammerComponent, SlingshotComponent, ToolComponent } from "client/components/tools";
@@ -28,7 +27,7 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 
 	private viewmodel!: ViewmodelComponent;
 
-	private tools!: Record<ToolType, ToolComponent>;
+	private tools: Array<ToolComponent> = [];
 	private curTool?: ToolComponent;
 
 	public override onStart(): void {
@@ -39,7 +38,7 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 
 		task.spawn(async () => {
 			await this.attachToolJointToViewmodel();
-			this.equipTool(ToolType.Hammer);
+			this.equipTool(0);
 		});
 	}
 
@@ -59,21 +58,17 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 		return this.curTool;
 	}
 
-	public equipTool(toolType: ToolType): void {
+	public equipTool(slot: number): void {
 		if (!this.isAlive) return;
 
-		const newTool = this.tools[toolType];
+		const newTool = this.tools[slot];
 		if (!newTool) {
-			warn(`Tool ${toolType} not found`);
+			warn(`No tool found in slot ${slot}`);
 			return;
 		}
 
-		const prevTool = this.curTool;
-		if (!this.unequip()) return;
-		if (prevTool === newTool) {
-			Events.UnequipCurrentTool.fire();
-			return;
-		}
+		if (newTool === this.curTool) return;
+		this.unequip();
 
 		this.curTool = newTool;
 		this.curTool.equip();
@@ -90,8 +85,16 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 			}
 		});
 
-		Events.EquipTool.fire(toolType);
-		print(`Equipped ${toolType}`);
+		Events.EquipTool.fire(this.curTool.toolType);
+		print(`Equipped ${this.curTool.instance.Name}`);
+	}
+
+	public cycleTool(direction: number): void {
+		if (this.tools.size() === 0) return;
+
+		const curIndex = this.curTool ? this.tools.indexOf(this.curTool) : -1;
+		const nextIndex = (curIndex + direction + this.tools.size()) % this.tools.size();
+		this.equipTool(nextIndex);
 	}
 
 	public unequip(): boolean {
@@ -133,11 +136,9 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 
 		print("Constructing tool components...");
 
-		this.tools = {
-			[ToolType.Hammer]: this.components.addComponent<HammerComponent>(hammer),
-			[ToolType.Slingshot]: this.components.addComponent<SlingshotComponent>(slingshot),
-		};
-		Object.values(this.tools).forEach((tool) => tool.initialize(this, this.viewmodel));
+		this.tools.push(this.components.addComponent<SlingshotComponent>(slingshot));
+		this.tools.push(this.components.addComponent<HammerComponent>(hammer));
+		this.tools.forEach((tool) => tool.initialize(this, this.viewmodel));
 
 		this.janitor.Add(() => {
 			this.components.removeComponent<HammerComponent>(hammer);

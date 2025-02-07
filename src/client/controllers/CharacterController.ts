@@ -5,7 +5,6 @@ import { CharacterComponent, GameCharacterComponent, LobbyCharacterComponent } f
 import { Events } from "client/network";
 import { CHARACTER_EVENT_RATE_LIMIT, TOOL_EVENT_RATE_LIMIT } from "shared/network";
 import { CharacterType } from "shared/types/characterTypes";
-import { ToolType } from "shared/types/toolTypes";
 
 enum DefaultAction {
 	Sneak = "Sneak",
@@ -14,6 +13,10 @@ enum DefaultAction {
 enum GameAction {
 	EquipPrimary = "EquipPrimary",
 	EquipSecondary = "EquipSecondary",
+
+	CycleToolForward = "CycleToolForward",
+	CycleToolBackward = "CycleToolBackward",
+
 	PrimaryToolAction = "PrimaryToolAction",
 	SecondaryToolAction = "SecondaryToolAction",
 }
@@ -45,23 +48,33 @@ export class CharacterController implements OnStart {
 	private gameInputActions: InputAction[] = [
 		{
 			actionName: GameAction.EquipPrimary,
-			input: [Enum.KeyCode.One, Enum.KeyCode.ButtonR1],
-			callback: (actionName, inputState): void => this.onEquipAction(actionName, inputState),
+			input: [Enum.KeyCode.One],
+			callback: (_, inputState): void => this.onEquipAction(0, inputState),
 		},
 		{
 			actionName: GameAction.EquipSecondary,
-			input: [Enum.KeyCode.Two, Enum.KeyCode.ButtonL1],
-			callback: (actionName, inputState): void => this.onEquipAction(actionName, inputState),
+			input: [Enum.KeyCode.Two],
+			callback: (_, inputState): void => this.onEquipAction(1, inputState),
+		},
+		{
+			actionName: GameAction.CycleToolForward,
+			input: [Enum.KeyCode.ButtonR1],
+			callback: (_, inputState): void => this.onCycleTool(1, inputState),
+		},
+		{
+			actionName: GameAction.CycleToolBackward,
+			input: [Enum.KeyCode.ButtonL1],
+			callback: (_, inputState): void => this.onCycleTool(-1, inputState),
 		},
 		{
 			actionName: GameAction.PrimaryToolAction,
 			input: [Enum.UserInputType.MouseButton1, Enum.KeyCode.ButtonR2],
-			callback: (actionName, inputState): void => this.onToolAction(actionName, inputState),
+			callback: (_, inputState): void => this.onToolAction(true, inputState),
 		},
 		{
 			actionName: GameAction.SecondaryToolAction,
 			input: [Enum.UserInputType.MouseButton2, Enum.KeyCode.ButtonL2],
-			callback: (actionName, inputState): void => this.onToolAction(actionName, inputState),
+			callback: (_, inputState): void => this.onToolAction(false, inputState),
 		},
 	];
 
@@ -161,27 +174,39 @@ export class CharacterController implements OnStart {
 		}
 	}
 
-	private onEquipAction(actionName: string, inputState: Enum.UserInputState): void {
+	private onEquipAction(slot: number, inputState: Enum.UserInputState): void {
+		if (inputState !== Enum.UserInputState.Begin) return;
+
 		const gameCharacter = this.getGameCharacter();
 		if (!gameCharacter) return;
 
-		if (inputState === Enum.UserInputState.Begin) {
-			const [allowed, tick] = this.canFireEvent(this.lastCharacterEventTick, CHARACTER_EVENT_RATE_LIMIT);
-			if (!allowed) return;
-			this.lastCharacterEventTick = tick;
+		const [allowed, tick] = this.canFireEvent(this.lastCharacterEventTick, CHARACTER_EVENT_RATE_LIMIT);
+		if (!allowed) return;
+		this.lastCharacterEventTick = tick;
 
-			gameCharacter.equipTool(actionName === "EquipPrimary" ? ToolType.Slingshot : ToolType.Hammer);
-		}
+		gameCharacter.equipTool(slot);
 	}
 
-	private onToolAction(actionName: string, inputState: Enum.UserInputState): void {
+	private onCycleTool(direction: number, inputState: Enum.UserInputState): void {
+		if (inputState !== Enum.UserInputState.Begin) return;
+
+		const gameCharacter = this.getGameCharacter();
+		if (!gameCharacter) return;
+
+		const [allowed, tick] = this.canFireEvent(this.lastCharacterEventTick, CHARACTER_EVENT_RATE_LIMIT);
+		if (!allowed) return;
+		this.lastCharacterEventTick = tick;
+
+		gameCharacter.cycleTool(direction);
+	}
+
+	private onToolAction(isPrimaryAction: boolean, inputState: Enum.UserInputState): void {
 		const gameCharacter = this.getGameCharacter();
 		if (!gameCharacter) return;
 
 		const tool = gameCharacter.getCurrentTool();
 		if (!tool) return;
 
-		const isPrimaryAction = actionName === "PrimaryToolAction";
 		if (inputState === Enum.UserInputState.Begin) {
 			const [allowed, tick] = this.canFireEvent(this.lastToolEventTick, TOOL_EVENT_RATE_LIMIT);
 			if (!allowed) return;

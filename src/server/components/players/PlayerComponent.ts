@@ -71,6 +71,8 @@ export abstract class PlayerComponent extends BaseComponent<{}, Player> implemen
 		}
 		this.character = character;
 		this.character.PrimaryPart = this.character.HumanoidRootPart;
+
+		this.character.Humanoid.Died.Connect(() => this.onDied());
 	}
 
 	protected onCharacterAdded(character: Model): void {

@@ -2,10 +2,12 @@ import { BaseComponent, Component, Components } from "@flamework/components";
 import Object from "@rbxts/object-utils";
 import { GameCharacterComponent } from "client/components/characters";
 import { ViewmodelComponent } from "client/components/characters/addons";
-import { ToolAnimations, ToolInstance } from "shared/types/toolTypes";
+import { ToolAnimations, ToolInstance, ToolType } from "shared/types/toolTypes";
 
 @Component()
 export abstract class ToolComponent extends BaseComponent<{}, ToolInstance> {
+	public abstract readonly toolType: ToolType;
+
 	public get equipped(): boolean {
 		return this._equipped;
 	}

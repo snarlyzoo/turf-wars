@@ -95,7 +95,6 @@ export const Events = GlobalEvents.createServer({
 		UpdateCharacterTilt: [limitEventRate(TILT_UPDATE_SEND_RATE)],
 
 		EquipTool: [limitEventRate(CHARACTER_EVENT_RATE_LIMIT)],
-		UnequipCurrentTool: [limitEventRate(CHARACTER_EVENT_RATE_LIMIT)],
 
 		DamageBlock: [limitEventRate(TOOL_EVENT_RATE_LIMIT)],
 
