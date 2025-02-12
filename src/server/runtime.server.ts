@@ -4,5 +4,5 @@ Flamework.addPaths("src/server/components");
 Flamework.addPaths("src/server/services");
 Flamework.addPaths("src/shared/components");
 
+print("Flamework ignite!");
 Flamework.ignite();
-print("Flamework ignited!");

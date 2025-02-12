@@ -72,7 +72,6 @@ export class ViewmodelComponent
 
 	public async waitForViewmodel(): Promise<ViewmodelInstance> {
 		if (this.viewmodel) return this.viewmodel;
-
 		return new Promise((resolve) => {
 			while (!this.viewmodel) task.wait();
 			resolve(this.viewmodel);

@@ -10,13 +10,11 @@ export abstract class ProjectileCaster {
 
 	private static actorQueue: PriorityQueue<Actor>;
 
-	public static initialize(): void {
-		print("Initializing projectile caster...");
-
+	public static async initialize(): Promise<void> {
 		this.createFolders();
 		this.createActors();
 
-		task.defer(() => {
+		await Promise.defer(() => {
 			const initializedActors: Actor[] = [];
 			for (let i = 0; i < this.THREAD_COUNT; i++) {
 				const actor = this.actorQueue.dequeue();
@@ -29,8 +27,6 @@ export abstract class ProjectileCaster {
 				initializedActors.push(actor);
 			}
 			initializedActors.forEach((actor) => this.actorQueue.enqueue(actor));
-
-			print("Projectile caster initialized");
 		});
 	}
 
@@ -62,8 +58,10 @@ export abstract class ProjectileCaster {
 	}
 
 	private static createActors(): void {
-		const controllerScript = script.Parent?.FindFirstChild("controller") as LocalScript;
-		if (!controllerScript) error("Controller script not found");
+		const controllerPrefab = script.Parent?.FindFirstChild("controller");
+		if (!controllerPrefab || !controllerPrefab.IsA("LocalScript")) {
+			error("Controller prefab not found");
+		}
 
 		this.actorQueue = new PriorityQueue<Actor>((a, b) => {
 			const aTasks = (a.GetAttribute("Tasks") as number) ?? 0;
@@ -75,7 +73,7 @@ export abstract class ProjectileCaster {
 			const actor = new Instance("Actor");
 			actor.Parent = this.actorFolder;
 
-			const controller = controllerScript.Clone();
+			const controller = controllerPrefab.Clone();
 			controller.Disabled = false;
 			controller.Parent = actor;
 

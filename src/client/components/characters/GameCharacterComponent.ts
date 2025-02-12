@@ -100,8 +100,6 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 	public unequip(): boolean {
 		if (!this.curTool) return true;
 
-		if (this.curTool.isActive) return false;
-
 		this.curTool.unequip();
 
 		this.curTool.instance.Parent = this.backpack;
@@ -159,7 +157,7 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 			this.toolJoint.Part0 = viewmodelInstance.Torso;
 			this.toolJoint.Parent = viewmodelInstance.Torso;
 		} catch (e) {
-			error(`Viewmodel not found: ${e}`);
+			error(`Failed to attach tool joint to viewmodel: ${e}`);
 		}
 	}
 }

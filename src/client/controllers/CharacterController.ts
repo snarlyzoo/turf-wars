@@ -6,7 +6,7 @@ import { Events } from "client/network";
 import { CHARACTER_EVENT_RATE_LIMIT, TOOL_EVENT_RATE_LIMIT } from "shared/network";
 import { CharacterType } from "shared/types/characterTypes";
 
-enum DefaultAction {
+enum BaseAction {
 	Sneak = "Sneak",
 }
 
@@ -39,9 +39,9 @@ export class CharacterController implements OnStart {
 	private lastCharacterEventTick: number = 0;
 	private lastToolEventTick: number = 0;
 
-	private defaultInputActions: InputAction[] = [
+	private baseInputActions: InputAction[] = [
 		{
-			actionName: DefaultAction.Sneak,
+			actionName: BaseAction.Sneak,
 			input: [Enum.KeyCode.LeftShift, Enum.KeyCode.ButtonL3],
 			callback: (_, inputState): void => this.onSneak(inputState),
 		},
@@ -131,7 +131,7 @@ export class CharacterController implements OnStart {
 		}
 		this.characterComponent = characterComponent;
 
-		this.bindInputActions(this.defaultInputActions);
+		this.bindInputActions(this.baseInputActions);
 
 		print(`${this.characterType} character component constructed`);
 	}
@@ -152,7 +152,7 @@ export class CharacterController implements OnStart {
 			this.components.removeComponent<LobbyCharacterComponent>(character);
 		}
 
-		this.unbindInputActions(this.defaultInputActions);
+		this.unbindInputActions(this.baseInputActions);
 
 		this.characterComponent = undefined;
 	}

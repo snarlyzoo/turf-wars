@@ -5,7 +5,8 @@ Flamework.addPaths("src/client/components");
 Flamework.addPaths("src/client/controllers");
 Flamework.addPaths("src/shared/components");
 
+print("Flamework ignite!");
 Flamework.ignite();
-print("Flamework ignited!");
 
-ProjectileCaster.initialize();
+print("Initializing ProjectileCaster...");
+ProjectileCaster.initialize().andThen(() => print("ProjectileCaster initialized!"));

@@ -73,6 +73,8 @@ export abstract class ToolComponent extends BaseComponent<{}, ToolInstance> {
 		if (!this.equipped) return;
 		this.equipped = false;
 
+		if (this.isActive) this.usePrimaryAction(false);
+
 		Object.values(this.charAnimTracks).forEach((anim) => anim.Stop());
 		Object.values(this.viewmodelAnimTracks).forEach((anim) => anim.Stop());
 	}

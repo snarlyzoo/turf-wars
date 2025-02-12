@@ -1,6 +1,5 @@
 import { Flamework, OnStart, Service } from "@flamework/core";
 import { Players, RunService, ServerStorage, Teams, Workspace } from "@rbxts/services";
-import Signal from "@rbxts/signal";
 import { Events } from "server/network";
 import { CharacterType } from "shared/types/characterTypes";
 import { GameMap } from "shared/types/workspaceTypes";
@@ -55,8 +54,6 @@ export class RoundManager implements OnStart {
 	private readonly GAME_MAP_PREFAB: GameMap;
 	private readonly MAP_LOAD_TIMEOUT: number = 10;
 
-	public StateChanged: Signal<(newState: GameState) => void> = new Signal();
-
 	public get state(): GameState {
 		return this._state;
 	}
@@ -66,13 +63,14 @@ export class RoundManager implements OnStart {
 	private _state: GameState = GameState.WaitingForPlayers;
 
 	private phaseIndex: number = 0;
+	private cancelTimer?: () => boolean;
 
 	private players: Set<Player> = new Set();
 
 	private team1: Team = Teams.FindFirstChild("Blue Team") as Team;
 	private team2: Team = Teams.FindFirstChild("Red Team") as Team;
 
-	private gameMap?: GameMap;
+	private prevGameMap?: GameMap;
 
 	public constructor(private playerRegistry: PlayerRegistry, private turfService: TurfService) {
 		const map = ServerStorage.FindFirstChild("Map");
@@ -92,10 +90,9 @@ export class RoundManager implements OnStart {
 		Players.PlayerRemoving.Connect((player) => this.onPlayerRemoving(player));
 	}
 
-	private async startIntermission(): Promise<void> {
+	private startIntermission(): void {
 		this.changeState(GameState.Intermission);
-		await Promise.delay(this.INTERMISSION_TIME);
-		await this.startRound();
+		this.promiseTimer(this.INTERMISSION_TIME).andThen(() => this.startRound());
 	}
 
 	private async startRound(): Promise<void> {
@@ -105,12 +102,20 @@ export class RoundManager implements OnStart {
 
 		print("Loading game map...");
 
-		await this.loadGameMap();
-		if (!this.gameMap) error("Failed to load game map");
+		const gameMap = await this.loadGameMap().catch((err) => {
+			warn(`Failed to load game map: ${err}`);
+			this.changeState(GameState.WaitingForPlayers);
+			this.checkPlayerCount();
+			return undefined;
+		});
+		if (!gameMap) return;
+
+		this.prevGameMap?.Destroy();
+		this.prevGameMap = gameMap;
 
 		print("Game map loaded");
 
-		this.turfService.initialize(this.team1, this.team2, this.gameMap);
+		this.turfService.initialize(this.team1, this.team2, gameMap);
 
 		Players.GetPlayers().forEach((player) => this.players.add(player));
 		this.shuffleTeams();
@@ -121,16 +126,16 @@ export class RoundManager implements OnStart {
 		await Promise.delay(this.ROUND_START_COUNTDOWN);
 
 		this.changeState(GameState.InRound);
-		this.disableSpawnBarriers(this.gameMap);
+		this.disableSpawnBarriers(gameMap);
 
-		await this.runPhase(0);
+		this.runPhase(0);
 	}
 
-	private async runPhase(index: number): Promise<void> {
+	private runPhase(index: number): void {
 		if (this.state !== GameState.InRound) return;
 
 		if (index >= this.PHASE_SEQUENCE.size()) {
-			await this.endRound();
+			this.endRound();
 			return;
 		}
 
@@ -145,12 +150,10 @@ export class RoundManager implements OnStart {
 
 		print(`Starting ${phase.Type} phase ${index + 1}`);
 
-		await Promise.delay(phase.Duration);
-		await this.runPhase(index + 1);
+		this.promiseTimer(phase.Duration).andThen(() => this.runPhase(index + 1));
 	}
 
 	private async endRound(): Promise<void> {
-		if (this.state === GameState.PreRound) await this.waitForStateChange();
 		if (this.state !== GameState.InRound) return;
 
 		this.changeState(GameState.PostRound);
@@ -165,14 +168,14 @@ export class RoundManager implements OnStart {
 	private changeState(newState: GameState): void {
 		if (this.state === newState) return;
 
+		if (this.cancelTimer) {
+			this.cancelTimer();
+			this.cancelTimer = undefined;
+		}
+
 		print(`Changing state to ${newState}`);
 
 		this.state = newState;
-		this.StateChanged.Fire(newState);
-	}
-
-	private async waitForStateChange(): Promise<GameState> {
-		return new Promise((resolve) => this.StateChanged.Once((newState) => resolve(newState)));
 	}
 
 	private isMapReady(map: GameMap): boolean {
@@ -188,20 +191,23 @@ export class RoundManager implements OnStart {
 		);
 	}
 
-	private async loadGameMap(): Promise<void> {
-		this.gameMap?.Destroy();
+	private async loadGameMap(): Promise<GameMap> {
+		return new Promise((resolve, reject) => {
+			const map = this.GAME_MAP_PREFAB.Clone();
+			map.Parent = Workspace;
 
-		const map = this.GAME_MAP_PREFAB.Clone();
-		map.Parent = Workspace;
-
-		const start = os.clock();
-		while (os.clock() - start < this.MAP_LOAD_TIMEOUT) {
-			if (this.isMapReady(map)) {
-				this.gameMap = map;
-				return;
+			const start = os.clock();
+			while (os.clock() - start < this.MAP_LOAD_TIMEOUT) {
+				if (this.isMapReady(map)) {
+					resolve(map);
+					return;
+				}
+				task.wait(0.1);
 			}
-			await Promise.delay(0.1);
-		}
+
+			map.Destroy();
+			reject("Map load timeout");
+		});
 	}
 
 	private disableSpawnBarriers(map: GameMap): void {
@@ -240,6 +246,25 @@ export class RoundManager implements OnStart {
 		} else if (this.state !== GameState.WaitingForPlayers) {
 			this.changeState(GameState.WaitingForPlayers);
 		}
+	}
+
+	private promiseTimer(duration: number): Promise<void> {
+		let cancelled = false;
+		const promise = new Promise<void>((resolve, reject) => {
+			const begin = os.clock();
+			while (os.clock() - begin < duration) {
+				if (cancelled) {
+					reject();
+					return;
+				}
+				task.wait();
+			}
+			resolve();
+		});
+
+		this.cancelTimer = (): boolean => (cancelled = true);
+
+		return promise;
 	}
 
 	private onPlayerAdded(): void {
