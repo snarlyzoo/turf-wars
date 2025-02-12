@@ -94,7 +94,7 @@ export class RoundManager implements OnStart {
 
 	private async startIntermission(): Promise<void> {
 		this.changeState(GameState.Intermission);
-		await this.delay(this.INTERMISSION_TIME);
+		await Promise.delay(this.INTERMISSION_TIME);
 		await this.startRound();
 	}
 
@@ -118,7 +118,7 @@ export class RoundManager implements OnStart {
 
 		Events.RoundStarting.broadcast(this.team1, this.team2);
 
-		await this.delay(this.ROUND_START_COUNTDOWN);
+		await Promise.delay(this.ROUND_START_COUNTDOWN);
 
 		this.changeState(GameState.InRound);
 		this.disableSpawnBarriers(this.gameMap);
@@ -145,7 +145,7 @@ export class RoundManager implements OnStart {
 
 		print(`Starting ${phase.Type} phase ${index + 1}`);
 
-		await this.delay(phase.Duration);
+		await Promise.delay(phase.Duration);
 		await this.runPhase(index + 1);
 	}
 
@@ -200,7 +200,7 @@ export class RoundManager implements OnStart {
 				this.gameMap = map;
 				return;
 			}
-			await this.delay(0.1);
+			await Promise.delay(0.1);
 		}
 	}
 
@@ -240,10 +240,6 @@ export class RoundManager implements OnStart {
 		} else if (this.state !== GameState.WaitingForPlayers) {
 			this.changeState(GameState.WaitingForPlayers);
 		}
-	}
-
-	private delay(duration: number): Promise<void> {
-		return new Promise((resolve) => task.delay(duration, resolve));
 	}
 
 	private onPlayerAdded(): void {
