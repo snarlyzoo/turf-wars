@@ -3,7 +3,7 @@ import { OnRender } from "@flamework/core";
 import { ReplicatedStorage, Workspace } from "@rbxts/services";
 import { GameCharacterComponent } from "client/components/characters";
 import { ViewmodelComponent } from "client/components/characters/addons";
-import { TurfTracker } from "client/controllers/TurfTracker";
+import { TurfTracker } from "client/controllers";
 import { Events, Functions } from "client/network";
 import { BlockComponent } from "shared/components";
 import { BlockGrid } from "shared/modules";

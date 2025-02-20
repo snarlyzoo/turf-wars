@@ -156,8 +156,8 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 			this.fetchToolJoint();
 			this.toolJoint.Part0 = viewmodelInstance.Torso;
 			this.toolJoint.Parent = viewmodelInstance.Torso;
-		} catch (e) {
-			error(`Failed to attach tool joint to viewmodel: ${e}`);
+		} catch {
+			error("Failed to attach tool joint to viewmodel");
 		}
 	}
 }

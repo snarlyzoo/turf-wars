@@ -1,9 +1,12 @@
 import { Controller, OnStart } from "@flamework/core";
+import Signal from "@rbxts/signal";
 import { Events } from "client/network";
 import { BlockGrid } from "shared/modules";
 
 @Controller()
 export class TurfTracker implements OnStart {
+	public TurfChanged: Signal<() => void> = new Signal();
+
 	private team1?: Team;
 	private team2?: Team;
 
@@ -11,7 +14,10 @@ export class TurfTracker implements OnStart {
 
 	public onStart(): void {
 		Events.RoundStarting.connect((team1, team2) => this.initialize(team1, team2));
-		Events.TurfChanged.connect((team1Turf) => (this.team1Turf = team1Turf));
+		Events.TurfChanged.connect((team1Turf) => {
+			this.team1Turf = team1Turf;
+			this.TurfChanged.Fire();
+		});
 	}
 
 	public initialize(team1: Team, team2: Team): void {
@@ -21,8 +27,8 @@ export class TurfTracker implements OnStart {
 		this.team1Turf = BlockGrid.DIMENSIONS.X / 2;
 	}
 
-	private getTurfDivider(): number {
-		return BlockGrid.MIN_BOUNDS.X + (this.team1Turf + 0.5) * BlockGrid.BLOCK_SIZE;
+	public getTeamTurf(team?: Team): number {
+		return team === this.team2 ? BlockGrid.DIMENSIONS.X - this.team1Turf : this.team1Turf;
 	}
 
 	public isPositionOnTurf(position: Vector3, team: Team): boolean {
@@ -40,5 +46,9 @@ export class TurfTracker implements OnStart {
 			warn(`${team.Name} is not a valid team`);
 			return false;
 		}
+	}
+
+	private getTurfDivider(): number {
+		return BlockGrid.MIN_BOUNDS.X + (this.team1Turf + 0.5) * BlockGrid.BLOCK_SIZE;
 	}
 }

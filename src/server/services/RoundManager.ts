@@ -1,9 +1,9 @@
 import { Flamework, OnStart, Service } from "@flamework/core";
 import { Players, RunService, ServerStorage, Teams, Workspace } from "@rbxts/services";
 import { Events } from "server/network";
+import { BlockGrid } from "shared/modules";
 import { CharacterType } from "shared/types/characterTypes";
 import { GameMap } from "shared/types/workspaceTypes";
-import { BlockGrid } from "shared/modules";
 import { PlayerRegistry, TurfService } from ".";
 
 enum GameState {
@@ -81,7 +81,12 @@ export class RoundManager implements OnStart {
 			this.MIN_PLAYER_COUNT = 1;
 			this.INTERMISSION_TIME = 2;
 			this.ROUND_START_COUNTDOWN = 2;
-			this.PHASE_SEQUENCE = [{ Type: PhaseType.Combat, Duration: 60 }];
+			this.PHASE_SEQUENCE = [
+				{ Type: PhaseType.Build, Duration: 2 },
+				{ Type: PhaseType.Combat, Duration: 2 },
+				{ Type: PhaseType.Build, Duration: 2 },
+				{ Type: PhaseType.Combat, Duration: 2 },
+			];
 		}
 	}
 
@@ -92,7 +97,10 @@ export class RoundManager implements OnStart {
 
 	private startIntermission(): void {
 		this.changeState(GameState.Intermission);
-		this.promiseTimer(this.INTERMISSION_TIME).andThen(() => this.startRound());
+		Events.SetGameClock.broadcast(this.INTERMISSION_TIME, "Intermission");
+		this.promiseTimer(this.INTERMISSION_TIME)
+			.andThen(() => this.startRound())
+			.catch((err) => warn(err));
 	}
 
 	private async startRound(): Promise<void> {
@@ -122,6 +130,7 @@ export class RoundManager implements OnStart {
 		await this.setPlayerComponents(CharacterType.Game);
 
 		Events.RoundStarting.broadcast(this.team1, this.team2);
+		Events.SetGameClock.broadcast(this.ROUND_START_COUNTDOWN, "Round Starting");
 
 		await Promise.delay(this.ROUND_START_COUNTDOWN);
 
@@ -142,15 +151,19 @@ export class RoundManager implements OnStart {
 		this.phaseIndex = index;
 		const phase = this.PHASE_SEQUENCE[this.phaseIndex];
 
-		const isCombat = phase.Type === PhaseType.Combat;
-		if (isCombat) {
+		const combatEnabled = phase.Type === PhaseType.Combat;
+		if (combatEnabled) {
 			this.turfService.setTurfPerKill(phase.TurfPerKill ?? 1);
 		}
-		this.playerRegistry.setCombatEnabled(isCombat);
+		this.playerRegistry.setCombatEnabled(combatEnabled);
+
+		Events.SetGameClock.broadcast(phase.Duration, `${phase.Type} Phase`);
 
 		print(`Starting ${phase.Type} phase ${index + 1}`);
 
-		this.promiseTimer(phase.Duration).andThen(() => this.runPhase(index + 1));
+		this.promiseTimer(phase.Duration)
+			.andThen(() => this.runPhase(index + 1))
+			.catch((err) => warn(err));
 	}
 
 	private async endRound(): Promise<void> {
@@ -172,6 +185,8 @@ export class RoundManager implements OnStart {
 			this.cancelTimer();
 			this.cancelTimer = undefined;
 		}
+
+		if (this.state === GameState.WaitingForPlayers) Events.SetGameClock.broadcast(0, "Waiting for Players");
 
 		print(`Changing state to ${newState}`);
 
@@ -250,17 +265,19 @@ export class RoundManager implements OnStart {
 
 	private promiseTimer(duration: number): Promise<void> {
 		let cancelled = false;
-		const promise = new Promise<void>((resolve, reject) => {
-			const begin = os.clock();
-			while (os.clock() - begin < duration) {
-				if (cancelled) {
-					reject();
-					return;
+		const promise = new Promise<void>((resolve, reject) =>
+			task.spawn(() => {
+				const begin = os.clock();
+				while (os.clock() - begin < duration) {
+					if (cancelled) {
+						reject(`Timer cancelled after ${math.floor(os.clock() - begin)} seconds`);
+						return;
+					}
+					task.wait();
 				}
-				task.wait();
-			}
-			resolve();
-		});
+				resolve();
+			}),
+		);
 
 		this.cancelTimer = (): boolean => (cancelled = true);
 

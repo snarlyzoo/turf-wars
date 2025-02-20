@@ -82,8 +82,8 @@ export class CharacterController implements OnStart {
 	public constructor(private components: Components) {}
 
 	public onStart(): void {
-		Events.SetCharacterType.connect((characterType) => (this.characterType = characterType));
 		Events.SetCombatEnabled.connect((enabled) => this.onSetCombatEnabled(enabled));
+		Events.SetCharacterType.connect((characterType) => (this.characterType = characterType));
 
 		this.player.CharacterAdded.Connect((character) => this.onCharacterAdded(character));
 		this.player.CharacterRemoving.Connect((character) => this.onCharacterRemoving(character));

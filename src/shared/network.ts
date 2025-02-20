@@ -26,13 +26,14 @@ interface ClientToServerEvents {
 
 interface ServerToClientEvents {
 	RoundStarting(team1: Team, team2: Team): void;
+	SetGameClock(time: number, phaseName: string): void;
+
 	TurfChanged(team1Turf: number): void;
 
+	SetCombatEnabled(enabled: boolean): void;
 	SetCharacterType(characterType: CharacterType): void;
 
 	CharacterTiltChanged: Networking.Unreliable<(character: HumanoidCharacterInstance, angle?: number) => void>;
-
-	SetCombatEnabled(enabled: boolean): void;
 	ProjectileFired: Networking.Unreliable<(caster: Player, projectileRecord: ProjectileRecord) => void>;
 }
 

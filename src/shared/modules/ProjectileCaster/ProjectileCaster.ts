@@ -14,20 +14,24 @@ export abstract class ProjectileCaster {
 		this.createFolders();
 		this.createActors();
 
-		await Promise.defer(() => {
-			const initializedActors: Actor[] = [];
-			for (let i = 0; i < this.THREAD_COUNT; i++) {
-				const actor = this.actorQueue.dequeue();
-				if (!actor) {
-					warn("No available actors to initialize");
-					break;
-				}
+		return new Promise((resolve, reject) =>
+			task.defer(() => {
+				try {
+					const initializedActors: Actor[] = [];
+					for (let i = 0; i < this.THREAD_COUNT; i++) {
+						const actor = this.actorQueue.dequeue();
+						if (!actor) throw `Failed to dequeue actor at index ${i}`;
 
-				actor.SendMessage("Initialize", this.projectileFolder);
-				initializedActors.push(actor);
-			}
-			initializedActors.forEach((actor) => this.actorQueue.enqueue(actor));
-		});
+						actor.SendMessage("Initialize", this.projectileFolder);
+						initializedActors.push(actor);
+					}
+					initializedActors.forEach((actor) => this.actorQueue.enqueue(actor));
+					resolve();
+				} catch (err) {
+					reject(err);
+				}
+			}),
+		);
 	}
 
 	public static castProjectile(

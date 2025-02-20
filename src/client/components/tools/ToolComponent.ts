@@ -103,8 +103,8 @@ export abstract class ToolComponent extends BaseComponent<{}, ToolInstance> {
 				Idle: viewmodelAnimator.LoadAnimation(viewmodelAnimations.Idle),
 				Equip: viewmodelAnimator.LoadAnimation(viewmodelAnimations.Equip),
 			};
-		} catch (e) {
-			error(`Failed to load viewmodel animations: ${e}`);
+		} catch {
+			error("Failed to load viewmodel animations");
 		}
 
 		print(`Animation tracks loaded for ${this.instance.Name}`);
