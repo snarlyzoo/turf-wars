@@ -7,7 +7,7 @@ const player = Players.LocalPlayer;
 
 export function mountUI(): void {
 	const playerGui = player.FindFirstChild("PlayerGui");
-	if (!playerGui) error("PlayerGui not found");
+	if (!playerGui) error("Player gui not found");
 
 	const root = createRoot(playerGui);
 	root.render(React.createElement(App));

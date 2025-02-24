@@ -1,6 +1,7 @@
 import { Components } from "@flamework/components";
 import { Controller, OnStart } from "@flamework/core";
 import { ContextActionService, Players } from "@rbxts/services";
+import Signal from "@rbxts/signal";
 import { CharacterComponent, GameCharacterComponent, LobbyCharacterComponent } from "client/components/characters";
 import { Events } from "client/network";
 import { CHARACTER_EVENT_RATE_LIMIT, TOOL_EVENT_RATE_LIMIT } from "shared/network";
@@ -30,6 +31,9 @@ interface InputAction {
 @Controller()
 export class CharacterController implements OnStart {
 	public readonly player: Player = Players.LocalPlayer;
+
+	public CharacterAdded: Signal<(characterComponent: CharacterComponent) => void> = new Signal();
+	public CharacterRemoved: Signal<() => void> = new Signal();
 
 	private characterType: CharacterType = CharacterType.Lobby;
 	private characterComponent?: CharacterComponent;
@@ -133,6 +137,8 @@ export class CharacterController implements OnStart {
 
 		this.bindInputActions(this.baseInputActions);
 
+		this.CharacterAdded.Fire(characterComponent);
+
 		print(`${this.characterType} character component constructed`);
 	}
 
@@ -155,6 +161,8 @@ export class CharacterController implements OnStart {
 		this.unbindInputActions(this.baseInputActions);
 
 		this.characterComponent = undefined;
+
+		this.CharacterRemoved.Fire();
 	}
 
 	private onSneak(inputState: Enum.UserInputState): void {

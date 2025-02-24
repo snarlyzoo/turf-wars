@@ -1,1 +1,2 @@
-export { default } from "./RoundHUD";
+export { RoundHUD } from "./RoundHUD";
+export { ToolHUD } from "./ToolHUD";

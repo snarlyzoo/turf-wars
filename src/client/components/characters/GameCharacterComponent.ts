@@ -1,6 +1,7 @@
 import { Component } from "@flamework/components";
 import { OnRender } from "@flamework/core";
-import { RunService } from "@rbxts/services";
+import { RunService, TextChatService, UserInputService } from "@rbxts/services";
+import Signal from "@rbxts/signal";
 import { ViewmodelComponent } from "client/components/characters/addons";
 import { HammerComponent, SlingshotComponent, ToolComponent } from "client/components/tools";
 import { Events } from "client/network";
@@ -13,6 +14,8 @@ import { CharacterComponent } from "./CharacterComponent";
 export class GameCharacterComponent extends CharacterComponent implements OnRender {
 	protected override CAMERA_MODE = Enum.CameraMode.LockFirstPerson;
 
+	public ToolEquipped: Signal<(slot: number) => void> = new Signal();
+
 	public get combatEnabled(): boolean {
 		return this._combatEnabled;
 	}
@@ -20,8 +23,9 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 		print(`Combat enabled: ${value}`);
 		this._combatEnabled = value;
 	}
-
 	private _combatEnabled: boolean = false;
+
+	private chatInputBarConfig?: ChatInputBarConfiguration;
 
 	private toolJoint!: Motor6D;
 
@@ -33,6 +37,8 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 	public override onStart(): void {
 		super.onStart();
 
+		this.fetchChatInputBarConfig();
+
 		this.constructViewmodel();
 		this.constructTools();
 
@@ -40,6 +46,16 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 			await this.attachToolJointToViewmodel();
 			this.equipTool(0);
 		});
+
+		this.janitor.Add(this.ToolEquipped);
+	}
+
+	public override onTick(dt: number): void {
+		super.onTick(dt);
+
+		UserInputService.MouseBehavior = this.chatInputBarConfig?.IsFocused
+			? Enum.MouseBehavior.Default
+			: Enum.MouseBehavior.LockCenter;
 	}
 
 	public onRender(): void {
@@ -54,6 +70,9 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 			});
 	}
 
+	public getTools(): Array<ToolComponent> {
+		return this.tools;
+	}
 	public getCurrentTool(): ToolComponent | undefined {
 		return this.curTool;
 	}
@@ -85,7 +104,9 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 			}
 		});
 
+		this.ToolEquipped.Fire(slot);
 		Events.EquipTool.fire(this.curTool.toolType);
+
 		print(`Equipped ${this.curTool.instance.Name}`);
 	}
 
@@ -107,6 +128,11 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 		this.curTool = undefined;
 
 		return true;
+	}
+
+	private fetchChatInputBarConfig(): void {
+		this.chatInputBarConfig = TextChatService.FindFirstChildOfClass("ChatInputBarConfiguration");
+		if (!this.chatInputBarConfig) warn("Chat input bar configuration not found");
 	}
 
 	private fetchToolJoint(): void {

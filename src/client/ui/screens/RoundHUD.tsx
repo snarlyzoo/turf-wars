@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "@rbxts/react";
 import { Players } from "@rbxts/services";
 import { TurfTracker } from "client/controllers";
 import { Events } from "client/network";
-import ProgressBar from "client/ui/elements";
+import { ProgressBar } from "client/ui/elements";
 import { BlockGrid } from "shared/modules";
 
 const player = Players.LocalPlayer;
@@ -14,7 +14,7 @@ const formatTime = (time: number): string => {
 	return string.format("%02d:%02d", minutes, seconds);
 };
 
-const RoundHUD = (): React.Element => {
+export const RoundHUD = (): React.Element => {
 	const [time, setTime] = useState(0);
 	const [phaseName, setPhaseName] = useState("Waiting for Players");
 	const [teamTurf, setTeamTurf] = useState(0);
@@ -45,10 +45,10 @@ const RoundHUD = (): React.Element => {
 		<frame
 			AnchorPoint={new Vector2(0.5, 0)}
 			BackgroundColor3={new Color3(0, 0, 0)}
-			BackgroundTransparency={0.75}
+			BackgroundTransparency={0.5}
 			BorderSizePixel={0}
 			Position={UDim2.fromScale(0.5, 0)}
-			Size={UDim2.fromScale(0, 0.15)}
+			Size={UDim2.fromScale(0.175, 0)}
 		>
 			<textlabel
 				AnchorPoint={new Vector2(0.5, 0)}
@@ -71,25 +71,24 @@ const RoundHUD = (): React.Element => {
 				TextColor3={new Color3(1, 1, 1)}
 				TextScaled={true}
 			/>
-			<uiaspectratioconstraint
-				AspectRatio={2}
-				AspectType={Enum.AspectType.ScaleWithParentSize}
-				DominantAxis={Enum.DominantAxis.Height}
-			/>
 			<ProgressBar
 				anchorPoint={new Vector2(0.5, 1)}
 				backgroundColor={new BrickColor("Bright red").Color}
-				borderSizePixel={0}
 				position={UDim2.fromScale(0.5, 1)}
 				size={UDim2.fromScale(1, 0.2)}
 				progressColor={new BrickColor("Bright blue").Color}
 				font={Enum.Font.Arcade}
 				textColor={new Color3(1, 1, 1)}
+				textVisible={true}
+				textAlignment="Progress"
 				value={teamTurf}
 				maxValue={BlockGrid.DIMENSIONS.X}
+			/>
+			<uiaspectratioconstraint
+				AspectRatio={2.5}
+				AspectType={Enum.AspectType.ScaleWithParentSize}
+				DominantAxis={Enum.DominantAxis.Width}
 			/>
 		</frame>
 	);
 };
-
-export default RoundHUD;

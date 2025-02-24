@@ -82,10 +82,8 @@ export class RoundManager implements OnStart {
 			this.INTERMISSION_TIME = 2;
 			this.ROUND_START_COUNTDOWN = 2;
 			this.PHASE_SEQUENCE = [
-				{ Type: PhaseType.Build, Duration: 2 },
-				{ Type: PhaseType.Combat, Duration: 2 },
-				{ Type: PhaseType.Build, Duration: 2 },
-				{ Type: PhaseType.Combat, Duration: 2 },
+				{ Type: PhaseType.Build, Duration: 5 },
+				{ Type: PhaseType.Combat, Duration: 60 },
 			];
 		}
 	}
