@@ -31,17 +31,20 @@ export class ViewmodelComponent
 	} as const;
 
 	private readonly LAND_SPRING_OPTIONS: SpringOptions = { damping: 0.4, frequency: 0.25 };
-	private readonly SWAY_SPRING_OPTIONS: SpringOptions = { tension: 210, friction: 20 };
 
-	private readonly MAX_SWAY_ANGLE: number = math.rad(1);
-	private readonly HORIZONTAL_SWAY_FREQUENCY: number = 8;
-	private readonly VERTICAL_SWAY_FREQUENCY: number = 16;
+	private readonly MAX_MOVE_ANGLE: number = math.rad(1);
+
+	private readonly MAX_SWAY_ANGLE: number = math.rad(5);
+	private readonly CAMERA_SWAY_FACTOR: number = 0.25;
 
 	private camera!: Camera;
 
 	private viewmodel!: ViewmodelInstance;
 
+	private prevCamCFrame: CFrame = new CFrame();
+
 	private jumpMotion: Motion<CFrame> = createMotion(new CFrame(), { start: true });
+	private moveMotion: Motion<CFrame> = createMotion(new CFrame(), { start: true });
 	private swayMotion: Motion<CFrame> = createMotion(new CFrame(), { start: true });
 
 	public onStart(): void {
@@ -55,12 +58,13 @@ export class ViewmodelComponent
 	public onRender(): void {
 		if (!this.viewmodel) return;
 
-		this.updateSway();
+		this.updateMoveMotion();
+		this.updateSwayMotion();
 
 		const camCFrame = this.camera.CFrame;
 		this.viewmodel.PivotTo(
 			camCFrame
-				.mul(this.jumpMotion.get().mul(this.swayMotion.get()))
+				.mul(this.jumpMotion.get().mul(this.moveMotion.get()).mul(this.swayMotion.get()))
 				.add(camCFrame.UpVector.mul(this.CAMERA_Y_OFFSET)),
 		);
 	}
@@ -125,17 +129,31 @@ export class ViewmodelComponent
 		this.janitor.Add(this.viewmodel);
 	}
 
-	private updateSway(): void {
+	private updateMoveMotion(): void {
 		let velocity = this.instance.HumanoidRootPart.AssemblyLinearVelocity;
 		velocity = new Vector3(velocity.X, 0, velocity.Z);
 
-		const factor = math.clamp(velocity.Magnitude / StarterPlayer.CharacterWalkSpeed, 0, 1);
+		const walkSpeed = StarterPlayer.CharacterWalkSpeed;
+		const factor = math.clamp(velocity.Magnitude / walkSpeed, 0, 1);
 
 		const tick = os.clock();
-		const angleX = math.cos(tick * this.VERTICAL_SWAY_FREQUENCY) * factor * this.MAX_SWAY_ANGLE;
-		const angleY = math.sin(tick * this.HORIZONTAL_SWAY_FREQUENCY) * factor * this.MAX_SWAY_ANGLE;
+		const angleX = math.cos(tick * walkSpeed) * factor * this.MAX_MOVE_ANGLE;
+		const angleY = math.sin(tick * (walkSpeed / 2)) * factor * this.MAX_MOVE_ANGLE;
 
-		this.swayMotion.spring(CFrame.Angles(angleX, angleY, 0), this.SWAY_SPRING_OPTIONS);
+		this.moveMotion.spring(CFrame.Angles(angleX, angleY, 0), config.spring.stiff);
+	}
+
+	private updateSwayMotion(): void {
+		const camCFrame = this.camera.CFrame;
+		const delta = this.prevCamCFrame.Inverse().mul(camCFrame);
+		const [deltaX, deltaY] = delta.ToEulerAnglesXYZ();
+
+		const angleX = math.clamp(deltaX * this.CAMERA_SWAY_FACTOR, -this.MAX_SWAY_ANGLE, this.MAX_SWAY_ANGLE);
+		const angleY = math.clamp(deltaY * this.CAMERA_SWAY_FACTOR, -this.MAX_SWAY_ANGLE, this.MAX_SWAY_ANGLE);
+
+		this.swayMotion.spring(CFrame.Angles(-angleX, -angleY, 0), config.spring.stiff);
+
+		this.prevCamCFrame = camCFrame;
 	}
 
 	private onHumanoidStateChanged(newState: Enum.HumanoidStateType): void {
