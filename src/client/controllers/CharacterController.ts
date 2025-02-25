@@ -1,6 +1,7 @@
 import { Components } from "@flamework/components";
 import { Controller, OnStart } from "@flamework/core";
-import { ContextActionService, Players } from "@rbxts/services";
+import { AbstractConstructor } from "@flamework/core/out/utility";
+import { ContextActionService, Players, Workspace } from "@rbxts/services";
 import Signal from "@rbxts/signal";
 import { CharacterComponent, GameCharacterComponent, LobbyCharacterComponent } from "client/components/characters";
 import { Events } from "client/network";
@@ -32,8 +33,50 @@ interface InputAction {
 export class CharacterController implements OnStart {
 	public readonly player: Player = Players.LocalPlayer;
 
+	public get team(): Team {
+		return this._team;
+	}
+	private set team(value: Team) {
+		this._team = value;
+	}
+	public get camera(): Camera {
+		return this._camera;
+	}
+	private set camera(value: Camera) {
+		this._camera = value;
+	}
+	public get backpack(): Backpack {
+		return this._backpack;
+	}
+	private set backpack(value: Backpack) {
+		this._backpack = value;
+	}
+	private _team!: Team;
+	private _camera!: Camera;
+	private _backpack!: Backpack;
+
 	public CharacterAdded: Signal<(characterComponent: CharacterComponent) => void> = new Signal();
 	public CharacterRemoved: Signal<() => void> = new Signal();
+
+	public get blockCount(): number {
+		return this._blockCount;
+	}
+	public set blockCount(value: number) {
+		this._blockCount = value;
+		this.BlockCountChanged.Fire(value);
+	}
+	public get projectileCount(): number {
+		return this._projectileCount;
+	}
+	public set projectileCount(value: number) {
+		this._projectileCount = value;
+		this.ProjectileCountChanged.Fire(value);
+	}
+	private _blockCount: number = 0;
+	private _projectileCount: number = 0;
+
+	public BlockCountChanged: Signal<(amount: number) => void> = new Signal();
+	public ProjectileCountChanged: Signal<(amount: number) => void> = new Signal();
 
 	private characterType: CharacterType = CharacterType.Lobby;
 	private characterComponent?: CharacterComponent;
@@ -86,11 +129,28 @@ export class CharacterController implements OnStart {
 	public constructor(private components: Components) {}
 
 	public onStart(): void {
+		this.player.CharacterAdded.Connect((character) => this.onCharacterAdded(character));
+		this.player.CharacterRemoving.Connect((character) => this.onCharacterRemoving(character));
+
 		Events.SetCombatEnabled.connect((enabled) => this.onSetCombatEnabled(enabled));
 		Events.SetCharacterType.connect((characterType) => (this.characterType = characterType));
 
-		this.player.CharacterAdded.Connect((character) => this.onCharacterAdded(character));
-		this.player.CharacterRemoving.Connect((character) => this.onCharacterRemoving(character));
+		Events.SetBlockCount.connect((amount) => (this.blockCount = amount));
+		Events.SetProjectileCount.connect((amount) => (this.projectileCount = amount));
+	}
+
+	private fetchPlayerObjects(): void {
+		const team = this.player.Team;
+		if (!team) error("Player does not have a team");
+		this.team = team;
+
+		const camera = Workspace.CurrentCamera;
+		if (!camera) error("Missing camera in workspace");
+		this.camera = camera;
+
+		const backpack = this.player.FindFirstChildOfClass("Backpack");
+		if (!backpack) error("Missing backpack in player instance");
+		this.backpack = backpack;
 	}
 
 	private bindInputActions(inputActions: InputAction[]): void {
@@ -110,12 +170,15 @@ export class CharacterController implements OnStart {
 		return [true, tick];
 	}
 
-	private getGameCharacter(): GameCharacterComponent | undefined {
-		return this.characterComponent instanceof GameCharacterComponent ? this.characterComponent : undefined;
+	private getCharacterComponent<T extends CharacterComponent>(componentClass: AbstractConstructor<T>): T | undefined {
+		return this.characterComponent instanceof componentClass ? this.characterComponent : undefined;
 	}
 
 	private onCharacterAdded(character: Model): void {
 		print("Character added");
+
+		this.fetchPlayerObjects();
+
 		character.WaitForChild("HumanoidRootPart");
 
 		print(`Constructing ${this.characterType} character component...`);
@@ -142,12 +205,6 @@ export class CharacterController implements OnStart {
 		print(`${this.characterType} character component constructed`);
 	}
 
-	private onSetCombatEnabled(enabled: boolean): void {
-		this.combatEnabled = enabled;
-		if (this.characterComponent instanceof GameCharacterComponent)
-			this.characterComponent.combatEnabled = this.combatEnabled;
-	}
-
 	private onCharacterRemoving(character: Model): void {
 		if (!this.characterComponent) return;
 
@@ -165,6 +222,12 @@ export class CharacterController implements OnStart {
 		this.CharacterRemoved.Fire();
 	}
 
+	private onSetCombatEnabled(enabled: boolean): void {
+		this.combatEnabled = enabled;
+		if (this.characterComponent instanceof GameCharacterComponent)
+			this.characterComponent.combatEnabled = this.combatEnabled;
+	}
+
 	private onSneak(inputState: Enum.UserInputState): void {
 		if (!this.characterComponent) return;
 
@@ -178,7 +241,7 @@ export class CharacterController implements OnStart {
 	private onEquipAction(slot: number, inputState: Enum.UserInputState): void {
 		if (inputState !== Enum.UserInputState.Begin) return;
 
-		const gameCharacter = this.getGameCharacter();
+		const gameCharacter = this.getCharacterComponent(GameCharacterComponent);
 		if (!gameCharacter) return;
 
 		const [allowed, tick] = this.canFireEvent(this.lastCharacterEventTick, CHARACTER_EVENT_RATE_LIMIT);
@@ -191,7 +254,7 @@ export class CharacterController implements OnStart {
 	private onCycleTool(direction: number, inputState: Enum.UserInputState): void {
 		if (inputState !== Enum.UserInputState.Begin) return;
 
-		const gameCharacter = this.getGameCharacter();
+		const gameCharacter = this.getCharacterComponent(GameCharacterComponent);
 		if (!gameCharacter) return;
 
 		const [allowed, tick] = this.canFireEvent(this.lastCharacterEventTick, CHARACTER_EVENT_RATE_LIMIT);
@@ -202,7 +265,7 @@ export class CharacterController implements OnStart {
 	}
 
 	private onToolAction(isPrimaryAction: boolean, inputState: Enum.UserInputState): void {
-		const gameCharacter = this.getGameCharacter();
+		const gameCharacter = this.getCharacterComponent(GameCharacterComponent);
 		if (!gameCharacter) return;
 
 		const tool = gameCharacter.getCurrentTool();

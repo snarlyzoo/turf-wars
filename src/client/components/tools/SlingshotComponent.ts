@@ -6,13 +6,14 @@ import { Events } from "client/network";
 import { BlockComponent } from "shared/components";
 import { ProjectileCaster } from "shared/modules";
 import { Projectile, ProjectileHitType, ProjectileModifier } from "shared/types/projectileTypes";
-import { SlingshotConfig, ToolType } from "shared/types/toolTypes";
+import { ResourceType, SlingshotConfig, ToolType } from "shared/types/toolTypes";
 import { getSlingshotConfig } from "shared/utility";
 import { ToolComponent } from "./ToolComponent";
 
 @Component()
 export class SlingshotComponent extends ToolComponent {
 	public override toolType = ToolType.Slingshot;
+	public override resourceType = ResourceType.Projectile;
 
 	private toFire: boolean = false;
 
@@ -42,7 +43,8 @@ export class SlingshotComponent extends ToolComponent {
 
 	private fireProjectile(toFire: boolean): void {
 		this.toFire = toFire;
-		if (!this.equipped || this.isActive || !this.toFire || !this.gameCharacter.combatEnabled) return;
+		if (!this.equipped || this.isActive || !this.toFire) return;
+		if (!this.gameCharacter.combatEnabled || this.gameCharacter.controller.projectileCount <= 0) return;
 
 		this.isActive = true;
 
@@ -52,7 +54,7 @@ export class SlingshotComponent extends ToolComponent {
 		speed = math.min(speed + this.config.drawSpeed * (os.clock() - tick), this.config.projectile.maxSpeed);
 
 		if (this.equipped && this.gameCharacter.combatEnabled) {
-			const camCFrame = this.gameCharacter.camera.CFrame;
+			const camCFrame = this.gameCharacter.controller.camera.CFrame;
 
 			const timestamp = Workspace.GetServerTimeNow();
 			Events.FireProjectile.fire(camCFrame.Position, camCFrame.LookVector, speed, timestamp);
@@ -75,6 +77,9 @@ export class SlingshotComponent extends ToolComponent {
 				projectileModifier,
 			);
 
+			this.gameCharacter.controller.projectileCount--;
+			task.delay(this.config.projectileRefillTime, () => this.gameCharacter.controller.projectileCount++);
+
 			task.wait(60 / this.config.rateOfFire);
 		}
 
@@ -82,7 +87,7 @@ export class SlingshotComponent extends ToolComponent {
 	}
 
 	private fetchTeamColor(): void {
-		let teamColor = this.gameCharacter.team.TeamColor;
+		let teamColor = this.gameCharacter.controller.team.TeamColor;
 		if (!teamColor) {
 			warn("Player does not have a team color");
 			teamColor = new BrickColor("Medium stone grey");
@@ -104,7 +109,7 @@ export class SlingshotComponent extends ToolComponent {
 		let projectileHitType: ProjectileHitType;
 		if (hitPart.HasTag("Block")) {
 			const block = this.components.getComponent<BlockComponent>(hitPart);
-			if (!block || block.attributes.TeamColor === this.gameCharacter.team.TeamColor) return;
+			if (!block || block.attributes.TeamColor === this.gameCharacter.controller.team.TeamColor) return;
 
 			projectileHitType = ProjectileHitType.Block;
 		} else {
@@ -115,7 +120,7 @@ export class SlingshotComponent extends ToolComponent {
 			if (!humanoid || humanoid.Health <= 0) return;
 
 			const player = Players.GetPlayerFromCharacter(character);
-			if (player && player.Team === this.gameCharacter.team) return;
+			if (player && player.Team === this.gameCharacter.controller.team) return;
 
 			hitName = `${character.Name}'s ${hitPart.Name}`;
 			projectileHitType = ProjectileHitType.Character;

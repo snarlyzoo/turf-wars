@@ -25,6 +25,7 @@ const DEFAULT_SLINGSHOT_CONFIG: SlingshotConfig = {
 	},
 
 	rateOfFire: 400,
+	projectileRefillTime: 5,
 };
 
 export function getHammerConfig(configuration?: Configuration): HammerConfig {
@@ -98,6 +99,11 @@ export function getSlingshotConfig(configuration?: Configuration): SlingshotConf
 	const rateOfFire = configuration.FindFirstChild("RateOfFire");
 	if (rateOfFire && rateOfFire.IsA("NumberValue")) {
 		config.rateOfFire = rateOfFire.Value;
+	}
+
+	const projectileRefillTime = configuration.FindFirstChild("ProjectileRefillTime");
+	if (projectileRefillTime && projectileRefillTime.IsA("NumberValue")) {
+		config.projectileRefillTime = projectileRefillTime.Value;
 	}
 
 	return config;

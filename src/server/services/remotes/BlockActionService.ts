@@ -51,11 +51,18 @@ export class BlockActionService {
 			return;
 		}
 
-		component.takeDamage(config.damage);
+		if (component.takeDamage(config.damage)) {
+			gamePlayer.giveBlocks(1);
+		}
 		gamePlayer.lastDamageBlockTick = tick;
 	}
 
 	public handlePlaceBlock(gamePlayer: GamePlayerComponent, position: Vector3): boolean {
+		if (gamePlayer.blockCount <= 0) {
+			warn(`${gamePlayer.instance.Name} does not have enough blocks`);
+			return false;
+		}
+
 		const hammerContext = this.validateHammerContext(gamePlayer);
 		if (!hammerContext) return false;
 
@@ -84,6 +91,8 @@ export class BlockActionService {
 		}
 
 		this.turfService.registerBlock(BlockGrid.placeBlock(position, gamePlayer.team.TeamColor));
+
+		gamePlayer.blockCount--;
 
 		return true;
 	}

@@ -21,6 +21,12 @@ export interface ToolAnimations {
 
 type AnimationFolder = Folder & ToolAnimations;
 
+export const enum ResourceType {
+	None = "None",
+	Block = "Block",
+	Projectile = "Projectile",
+}
+
 export type HammerConfig = {
 	range: number;
 
@@ -32,4 +38,5 @@ export type SlingshotConfig = {
 	drawSpeed: number;
 	projectile: ProjectileConfig;
 	rateOfFire: number;
+	projectileRefillTime: number;
 };

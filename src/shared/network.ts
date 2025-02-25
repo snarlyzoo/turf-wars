@@ -33,6 +33,9 @@ interface ServerToClientEvents {
 	SetCombatEnabled(enabled: boolean): void;
 	SetCharacterType(characterType: CharacterType): void;
 
+	SetBlockCount(amount: number): void;
+	SetProjectileCount(amount: number): void;
+
 	CharacterTiltChanged: Networking.Unreliable<(character: HumanoidCharacterInstance, angle?: number) => void>;
 	ProjectileFired: Networking.Unreliable<(caster: Player, projectileRecord: ProjectileRecord) => void>;
 }

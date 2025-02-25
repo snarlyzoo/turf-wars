@@ -17,7 +17,11 @@ enum GameState {
 type Phase = {
 	Type: PhaseType;
 	Duration: number;
+
 	TurfPerKill?: number;
+
+	initialBlockCount?: number;
+	initialProjectileCount?: number;
 };
 enum PhaseType {
 	Build = "Build",
@@ -43,10 +47,10 @@ export class RoundManager implements OnStart {
 	private readonly ROUND_START_COUNTDOWN: number = 10;
 
 	private readonly PHASE_SEQUENCE: Phase[] = [
-		{ Type: PhaseType.Build, Duration: 40 },
-		{ Type: PhaseType.Combat, Duration: 90 },
-		{ Type: PhaseType.Build, Duration: 20 },
-		{ Type: PhaseType.Combat, Duration: 90, TurfPerKill: 3 },
+		{ Type: PhaseType.Build, Duration: 40, initialBlockCount: 32 },
+		{ Type: PhaseType.Combat, Duration: 90, initialProjectileCount: 16 },
+		{ Type: PhaseType.Build, Duration: 20, initialBlockCount: 16 },
+		{ Type: PhaseType.Combat, Duration: 90, TurfPerKill: 3, initialProjectileCount: 16 },
 	];
 
 	private readonly SPECTATOR_TEAM: Team = Teams.FindFirstChild("Spectators") as Team;
@@ -82,8 +86,8 @@ export class RoundManager implements OnStart {
 			this.INTERMISSION_TIME = 2;
 			this.ROUND_START_COUNTDOWN = 2;
 			this.PHASE_SEQUENCE = [
-				{ Type: PhaseType.Build, Duration: 5 },
-				{ Type: PhaseType.Combat, Duration: 60 },
+				{ Type: PhaseType.Build, Duration: 5, initialBlockCount: 32 },
+				{ Type: PhaseType.Combat, Duration: 60, initialProjectileCount: 16 },
 			];
 		}
 	}
@@ -154,6 +158,10 @@ export class RoundManager implements OnStart {
 			this.turfService.setTurfPerKill(phase.TurfPerKill ?? 1);
 		}
 		this.playerRegistry.setCombatEnabled(combatEnabled);
+
+		if (phase.initialBlockCount !== undefined) this.playerRegistry.giveBlocksToAll(phase.initialBlockCount);
+		if (phase.initialProjectileCount !== undefined)
+			this.playerRegistry.giveProjectilesToAll(phase.initialProjectileCount);
 
 		Events.SetGameClock.broadcast(phase.Duration, `${phase.Type} Phase`);
 

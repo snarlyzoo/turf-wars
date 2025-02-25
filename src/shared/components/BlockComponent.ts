@@ -17,13 +17,15 @@ export class BlockComponent extends BaseComponent<Attributes, BasePart> implemen
 		this.instance.BrickColor = this.attributes.TeamColor;
 	}
 
-	public takeDamage(damage: number): void {
+	public takeDamage(damage: number): boolean {
 		this.attributes.Health -= damage;
 
-		if (this.attributes.Health > 0) {
-			this.instance.Transparency = 0.5 * (1 - this.attributes.Health / this.MAX_HEALTH);
-		} else {
+		if (this.attributes.Health <= 0) {
 			this.instance.Destroy();
+			return true;
 		}
+
+		this.instance.Transparency = 0.5 * (1 - this.attributes.Health / this.MAX_HEALTH);
+		return false;
 	}
 }

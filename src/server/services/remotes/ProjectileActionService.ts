@@ -30,6 +30,11 @@ export class ProjectileActionService {
 			return;
 		}
 
+		if (gamePlayer.projectileCount <= 0) {
+			warn(`${gamePlayer.instance.Name} does not have any projectiles`);
+			return;
+		}
+
 		const character = gamePlayer.getCharacter();
 		if (!character) {
 			warn(`${gamePlayer.instance.Name} does not have a character`);
@@ -80,6 +85,9 @@ export class ProjectileActionService {
 		gamePlayer.projectileRecords.set(timestamp, projectileRecord);
 		task.delay(config.projectile.lifetime, () => gamePlayer.projectileRecords.delete(timestamp));
 		gamePlayer.lastFireProjectileTick = tick;
+
+		gamePlayer.projectileCount--;
+		task.delay(config.projectileRefillTime, () => gamePlayer.projectileCount++);
 
 		Events.ProjectileFired.except(gamePlayer.instance, gamePlayer.instance, projectileRecord);
 	}

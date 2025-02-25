@@ -2,25 +2,12 @@ import { BaseComponent, Component, Components } from "@flamework/components";
 import Object from "@rbxts/object-utils";
 import { GameCharacterComponent } from "client/components/characters";
 import { ViewmodelComponent } from "client/components/characters/addons";
-import { ToolAnimations, ToolInstance, ToolType } from "shared/types/toolTypes";
+import { ResourceType, ToolAnimations, ToolInstance, ToolType } from "shared/types/toolTypes";
 
 @Component()
 export abstract class ToolComponent extends BaseComponent<{}, ToolInstance> {
 	public abstract readonly toolType: ToolType;
-
-	public get equipped(): boolean {
-		return this._equipped;
-	}
-	protected set equipped(value: boolean) {
-		this._equipped = value;
-	}
-
-	public get isActive(): boolean {
-		return this._isActive;
-	}
-	protected set isActive(value: boolean) {
-		this._isActive = value;
-	}
+	public abstract readonly resourceType: ResourceType;
 
 	public get mouseIcon(): string {
 		return this._mouseIcon;
@@ -28,10 +15,22 @@ export abstract class ToolComponent extends BaseComponent<{}, ToolInstance> {
 	protected set mouseIcon(value: string) {
 		this._mouseIcon = value;
 	}
+	private _mouseIcon: string = "rbxassetid://SystemCursors/Arrow";
 
+	public get equipped(): boolean {
+		return this._equipped;
+	}
+	protected set equipped(value: boolean) {
+		this._equipped = value;
+	}
+	public get isActive(): boolean {
+		return this._isActive;
+	}
+	protected set isActive(value: boolean) {
+		this._isActive = value;
+	}
 	private _equipped: boolean = false;
 	private _isActive: boolean = false;
-	private _mouseIcon: string = "rbxassetid://SystemCursors/Arrow";
 
 	protected gameCharacter!: GameCharacterComponent;
 	private viewmodel!: ViewmodelComponent;

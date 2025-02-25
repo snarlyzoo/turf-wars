@@ -6,6 +6,7 @@ import { ProjectileRecord } from "shared/types/projectileTypes";
 import { CharacterType, R15CharacterInstance, R6CharacterInstance } from "shared/types/characterTypes";
 import { findFirstChildWithTag, getHammerConfig, getSlingshotConfig } from "shared/utility";
 import { TurfService } from "server/services";
+import { Events } from "server/network";
 
 type ToolConfigMap = {
 	[ToolType.Slingshot]: SlingshotConfig;
@@ -21,6 +22,21 @@ export class GamePlayerComponent extends PlayerComponent implements OnTick {
 	protected override characterType = CharacterType.Game;
 
 	public combatEnabled: boolean = false;
+
+	public get blockCount(): number {
+		return this._blockCount;
+	}
+	public set blockCount(value: number) {
+		this._blockCount = value;
+	}
+	public get projectileCount(): number {
+		return this._projectileCount;
+	}
+	public set projectileCount(value: number) {
+		this._projectileCount = value;
+	}
+	private _blockCount: number = 0;
+	private _projectileCount: number = 0;
 
 	public lastDamageBlockTick: number = 0;
 	public lastFireProjectileTick: number = 0;
@@ -104,6 +120,15 @@ export class GamePlayerComponent extends PlayerComponent implements OnTick {
 
 		this.curTool.Parent = this.backpack;
 		this.curTool = undefined;
+	}
+
+	public giveBlocks(amount: number): void {
+		this.blockCount += amount;
+		Events.SetBlockCount.fire(this.instance, this.blockCount);
+	}
+	public giveProjectiles(amount: number): void {
+		this.projectileCount += amount;
+		Events.SetProjectileCount.fire(this.instance, this.projectileCount);
 	}
 
 	private createToolJoint(): void {

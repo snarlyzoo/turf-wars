@@ -7,7 +7,7 @@ import { TurfTracker } from "client/controllers";
 import { Events, Functions } from "client/network";
 import { BlockComponent } from "shared/components";
 import { BlockGrid } from "shared/modules";
-import { HammerConfig, ToolType } from "shared/types/toolTypes";
+import { HammerConfig, ResourceType, ToolType } from "shared/types/toolTypes";
 import { getHammerConfig } from "shared/utility";
 import { ToolComponent } from "./ToolComponent";
 
@@ -20,6 +20,7 @@ export class HammerComponent extends ToolComponent implements OnRender {
 	private readonly Map: Model = Workspace.FindFirstChild("Map") as Model;
 
 	public override toolType = ToolType.Hammer;
+	public override resourceType = ResourceType.Block;
 
 	private toDelete: boolean = false;
 
@@ -38,7 +39,7 @@ export class HammerComponent extends ToolComponent implements OnRender {
 		super.initialize(character, viewmodel);
 
 		this.targetIndicator = ReplicatedStorage.FindFirstChild("TargetIndicator")?.Clone() as TargetIndicator;
-		this.targetIndicator.Parent = this.gameCharacter.camera;
+		this.targetIndicator.Parent = this.gameCharacter.controller.camera;
 
 		this.config = getHammerConfig(this.instance.FindFirstChildOfClass("Configuration"));
 	}
@@ -46,7 +47,7 @@ export class HammerComponent extends ToolComponent implements OnRender {
 	public onRender(): void {
 		if (!this.equipped) return;
 
-		const camCFrame = this.gameCharacter.camera.CFrame;
+		const camCFrame = this.gameCharacter.controller.camera.CFrame;
 
 		const raycastParams = new RaycastParams();
 		raycastParams.FilterDescendantsInstances = [BlockGrid.Folder, this.Map];
@@ -99,7 +100,10 @@ export class HammerComponent extends ToolComponent implements OnRender {
 		this.isActive = true;
 
 		while (this.equipped && this.toDelete) {
-			if (this.targetBlock && this.targetBlock.attributes.TeamColor === this.gameCharacter.team.TeamColor) {
+			if (
+				this.targetBlock &&
+				this.targetBlock.attributes.TeamColor === this.gameCharacter.controller.team.TeamColor
+			) {
 				this.targetBlock.takeDamage(this.config.damage);
 				Events.DamageBlock.fire(this.targetBlock.instance);
 
@@ -113,13 +117,17 @@ export class HammerComponent extends ToolComponent implements OnRender {
 	}
 
 	private placeBlock(): void {
-		if (!this.equipped || this.isActive) return;
+		if (!this.equipped || this.isActive || this.gameCharacter.controller.blockCount <= 0) return;
 
-		if (!this.placePos || !this.turfTracker.isPositionOnTurf(this.placePos, this.gameCharacter.team)) return;
+		if (!this.placePos || !this.turfTracker.isPositionOnTurf(this.placePos, this.gameCharacter.controller.team))
+			return;
 
 		if (Workspace.GetPartBoundsInBox(new CFrame(this.placePos), this.BLOCK_OVERLAP_SIZE).size() > 0) return;
 
-		const block = BlockGrid.placeBlock(this.placePos, this.gameCharacter.team.TeamColor);
-		Functions.PlaceBlock.invoke(this.placePos).then(() => block.Destroy());
+		const block = BlockGrid.placeBlock(this.placePos, this.gameCharacter.controller.team.TeamColor);
+		Functions.PlaceBlock.invoke(this.placePos).then((success) => {
+			if (success) this.gameCharacter.controller.blockCount--;
+			block.Destroy();
+		});
 	}
 }

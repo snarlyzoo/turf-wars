@@ -53,6 +53,17 @@ export class PlayerRegistry implements OnStart {
 		});
 	}
 
+	public giveBlocksToAll(amount: number): void {
+		this.playerComponents.forEach((playerComponent) => {
+			if (playerComponent instanceof GamePlayerComponent) playerComponent.giveBlocks(amount);
+		});
+	}
+	public giveProjectilesToAll(amount: number): void {
+		this.playerComponents.forEach((playerComponent) => {
+			if (playerComponent instanceof GamePlayerComponent) playerComponent.giveProjectiles(amount);
+		});
+	}
+
 	public kickPlayer(player: Player, reason: string): void {
 		warn(`Kicking ${player.Name} for ${reason}`);
 		player.Kick(reason);

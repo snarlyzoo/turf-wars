@@ -123,7 +123,7 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 
 		this.curTool.unequip();
 
-		this.curTool.instance.Parent = this.backpack;
+		this.curTool.instance.Parent = this.controller.backpack;
 		this.toolJoint.Part1 = undefined;
 		this.curTool = undefined;
 
@@ -154,8 +154,8 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 	}
 
 	private constructTools(): void {
-		const hammer = findFirstChildWithTag(this.backpack, ToolType.Hammer);
-		const slingshot = findFirstChildWithTag(this.backpack, ToolType.Slingshot);
+		const hammer = findFirstChildWithTag(this.controller.backpack, ToolType.Hammer);
+		const slingshot = findFirstChildWithTag(this.controller.backpack, ToolType.Slingshot);
 		if (!hammer || !slingshot) error("Missing tool instances in backpack");
 
 		print("Constructing tool components...");
