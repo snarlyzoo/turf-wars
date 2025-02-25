@@ -1,17 +1,15 @@
 import { Component, Components } from "@flamework/components";
 import { OnRender } from "@flamework/core";
-import { ReplicatedStorage, Workspace } from "@rbxts/services";
+import { Workspace } from "@rbxts/services";
 import { GameCharacterComponent } from "client/components/characters";
 import { ViewmodelComponent } from "client/components/characters/addons";
 import { TurfTracker } from "client/controllers";
 import { Events, Functions } from "client/network";
 import { BlockComponent } from "shared/components";
 import { BlockGrid } from "shared/modules";
-import { HammerConfig, ResourceType, ToolType } from "shared/types/toolTypes";
+import { HammerConfig, ResourceType, TargetIndicator, ToolType } from "shared/types/toolTypes";
 import { getHammerConfig } from "shared/utility";
 import { ToolComponent } from "./ToolComponent";
-
-type TargetIndicator = PVInstance & { SelectionBox: SelectionBox };
 
 @Component()
 export class HammerComponent extends ToolComponent implements OnRender {
@@ -38,10 +36,10 @@ export class HammerComponent extends ToolComponent implements OnRender {
 	public override initialize(character: GameCharacterComponent, viewmodel: ViewmodelComponent): void {
 		super.initialize(character, viewmodel);
 
-		this.targetIndicator = ReplicatedStorage.FindFirstChild("TargetIndicator")?.Clone() as TargetIndicator;
-		this.targetIndicator.Parent = this.gameCharacter.controller.camera;
-
 		this.config = getHammerConfig(this.instance.FindFirstChildOfClass("Configuration"));
+
+		this.targetIndicator = this.config.targetIndicator.Clone();
+		this.targetIndicator.Parent = this.gameCharacter.controller.camera;
 	}
 
 	public onRender(): void {
@@ -124,7 +122,11 @@ export class HammerComponent extends ToolComponent implements OnRender {
 
 		if (Workspace.GetPartBoundsInBox(new CFrame(this.placePos), this.BLOCK_OVERLAP_SIZE).size() > 0) return;
 
-		const block = BlockGrid.placeBlock(this.placePos, this.gameCharacter.controller.team.TeamColor);
+		const block = BlockGrid.placeBlock(
+			this.placePos,
+			this.gameCharacter.controller.team.TeamColor,
+			this.config.blockPrefab,
+		);
 		Functions.PlaceBlock.invoke(this.placePos).then((success) => {
 			if (success) this.gameCharacter.controller.blockCount--;
 			block.Destroy();

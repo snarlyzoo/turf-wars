@@ -72,7 +72,7 @@ export const ToolHUD = (): React.Element | undefined => {
 				setVisible(true);
 				characterController.CharacterRemoved.Once(() => setVisible(false));
 
-				setToolNames(gameCharacter.getTools().map((tool) => tool.instance.Name));
+				setToolNames(gameCharacter.tools.map((tool) => tool.instance.Name));
 				gameCharacter.ToolEquipped.Connect((slot) => setCurToolSlot(slot));
 			}),
 		);

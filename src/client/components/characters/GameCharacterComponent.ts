@@ -25,14 +25,23 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 	}
 	private _combatEnabled: boolean = false;
 
+	public get tools(): Array<ToolComponent> {
+		return this._tools;
+	}
+	public get curTool(): ToolComponent {
+		return this._curTool;
+	}
+	private set curTool(value: ToolComponent) {
+		this._curTool = value;
+	}
+	private _tools: Array<ToolComponent> = [];
+	private _curTool!: ToolComponent;
+
 	private chatInputBarConfig?: ChatInputBarConfiguration;
 
 	private toolJoint!: Motor6D;
 
 	private viewmodel!: ViewmodelComponent;
-
-	private tools: Array<ToolComponent> = [];
-	private curTool?: ToolComponent;
 
 	public override onStart(): void {
 		super.onStart();
@@ -68,13 +77,6 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 				part.CastShadow = false;
 				part.LocalTransparencyModifier = 0;
 			});
-	}
-
-	public getTools(): Array<ToolComponent> {
-		return this.tools;
-	}
-	public getCurrentTool(): ToolComponent | undefined {
-		return this.curTool;
 	}
 
 	public equipTool(slot: number): void {
@@ -125,7 +127,6 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 
 		this.curTool.instance.Parent = this.controller.backpack;
 		this.toolJoint.Part1 = undefined;
-		this.curTool = undefined;
 
 		return true;
 	}

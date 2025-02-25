@@ -1,10 +1,15 @@
-import { HammerConfig, SlingshotConfig } from "shared/types/toolTypes";
+import { Flamework } from "@flamework/core";
+import { ReplicatedStorage } from "@rbxts/services";
+import { HammerConfig, SlingshotConfig, TargetIndicator } from "shared/types/toolTypes";
 
 const DEFAULT_HAMMER_CONFIG: HammerConfig = {
 	range: 15,
 
 	damage: 25,
 	rateOfDamage: 500,
+
+	blockPrefab: ReplicatedStorage.FindFirstChild("Block") as BasePart,
+	targetIndicator: ReplicatedStorage.FindFirstChild("TargetIndicator") as TargetIndicator,
 };
 
 const DEFAULT_SLINGSHOT_CONFIG: SlingshotConfig = {
@@ -28,18 +33,39 @@ const DEFAULT_SLINGSHOT_CONFIG: SlingshotConfig = {
 	projectileRefillTime: 5,
 };
 
+const isTargetIndicator = Flamework.createGuard<TargetIndicator>();
+
 export function getHammerConfig(configuration?: Configuration): HammerConfig {
 	const config = DEFAULT_HAMMER_CONFIG;
 	if (!configuration) return config;
+
+	const range = configuration.FindFirstChild("Range");
+	if (range && range.IsA("NumberValue")) {
+		config.range = range.Value;
+	}
 
 	const damage = configuration.FindFirstChild("Damage");
 	if (damage && damage.IsA("NumberValue")) {
 		config.damage = damage.Value;
 	}
-
 	const rateOfDamage = configuration.FindFirstChild("RateOfDamage");
 	if (rateOfDamage && rateOfDamage.IsA("NumberValue")) {
 		config.rateOfDamage = rateOfDamage.Value;
+	}
+
+	const blockPrefab = configuration.FindFirstChild("BlockPrefab");
+	if (blockPrefab && blockPrefab.IsA("ObjectValue")) {
+		const value = blockPrefab.Value;
+		if (value && value.IsA("BasePart") && value.HasTag("Block")) {
+			config.blockPrefab = value;
+		}
+	}
+	const targetIndicator = configuration.FindFirstChild("TargetIndicator");
+	if (targetIndicator && targetIndicator.IsA("ObjectValue")) {
+		const value = targetIndicator.Value;
+		if (isTargetIndicator(value)) {
+			config.targetIndicator = value;
+		}
 	}
 
 	return config;

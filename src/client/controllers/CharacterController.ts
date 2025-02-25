@@ -268,17 +268,14 @@ export class CharacterController implements OnStart {
 		const gameCharacter = this.getCharacterComponent(GameCharacterComponent);
 		if (!gameCharacter) return;
 
-		const tool = gameCharacter.getCurrentTool();
-		if (!tool) return;
-
 		if (inputState === Enum.UserInputState.Begin) {
 			const [allowed, tick] = this.canFireEvent(this.lastToolEventTick, TOOL_EVENT_RATE_LIMIT);
 			if (!allowed) return;
 			this.lastToolEventTick = tick;
 
-			isPrimaryAction ? tool.usePrimaryAction(true) : tool.useSecondaryAction();
+			isPrimaryAction ? gameCharacter.curTool.usePrimaryAction(true) : gameCharacter.curTool.useSecondaryAction();
 		} else if (inputState === Enum.UserInputState.End && isPrimaryAction) {
-			tool.usePrimaryAction(false);
+			gameCharacter.curTool.usePrimaryAction(false);
 		}
 	}
 }

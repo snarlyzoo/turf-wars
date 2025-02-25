@@ -1,4 +1,4 @@
-import { ReplicatedStorage, RunService, Workspace } from "@rbxts/services";
+import { RunService, Workspace } from "@rbxts/services";
 
 export abstract class BlockGrid {
 	public static readonly BLOCK_SIZE = 3;
@@ -24,10 +24,8 @@ export abstract class BlockGrid {
 		}
 	})();
 
-	private static readonly blockPrefab = ReplicatedStorage.FindFirstChild("Block") as BasePart;
-
-	public static placeBlock(position: Vector3, teamColor: BrickColor): BasePart {
-		const block = this.blockPrefab.Clone();
+	public static placeBlock(position: Vector3, teamColor: BrickColor, blockPrefab: BasePart): BasePart {
+		const block = blockPrefab.Clone();
 		block.Position = position;
 		block.SetAttribute("TeamColor", teamColor);
 		block.Parent = BlockGrid.Folder;

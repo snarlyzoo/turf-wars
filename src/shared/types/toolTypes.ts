@@ -27,11 +27,15 @@ export const enum ResourceType {
 	Projectile = "Projectile",
 }
 
+export type TargetIndicator = PVInstance & { SelectionBox: SelectionBox };
 export type HammerConfig = {
 	range: number;
 
 	damage: number;
 	rateOfDamage: number;
+
+	blockPrefab: BasePart;
+	targetIndicator: TargetIndicator;
 };
 
 export type SlingshotConfig = {

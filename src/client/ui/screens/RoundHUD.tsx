@@ -1,4 +1,5 @@
 import { Dependency } from "@flamework/core";
+import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
 import React, { useEffect, useState } from "@rbxts/react";
 import { Players } from "@rbxts/services";
 import { TurfTracker } from "client/controllers";
@@ -19,6 +20,8 @@ export const RoundHUD = (): React.Element => {
 	const [phaseName, setPhaseName] = useState("Waiting for Players");
 	const [teamTurf, setTeamTurf] = useState(0);
 
+	const turfTracker = useFlameworkDependency<TurfTracker>();
+
 	useEffect(() => {
 		const connections: Array<RBXScriptConnection> = [];
 
@@ -29,7 +32,6 @@ export const RoundHUD = (): React.Element => {
 			}),
 		);
 
-		const turfTracker = Dependency<TurfTracker>();
 		connections.push(turfTracker.TurfChanged.Connect(() => setTeamTurf(turfTracker.getTeamTurf(player.Team))));
 
 		return () => connections.forEach((connection) => connection.Disconnect());

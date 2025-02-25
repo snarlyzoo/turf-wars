@@ -3,7 +3,7 @@ import { Players, RunService, ServerStorage, Teams, Workspace } from "@rbxts/ser
 import { Events } from "server/network";
 import { BlockGrid } from "shared/modules";
 import { CharacterType } from "shared/types/characterTypes";
-import { GameMap } from "shared/types/workspaceTypes";
+import { GameMap, TeamSpawn } from "shared/types/workspaceTypes";
 import { PlayerRegistry, TurfService } from ".";
 
 enum GameState {
@@ -137,7 +137,9 @@ export class RoundManager implements OnStart {
 		await Promise.delay(this.ROUND_START_COUNTDOWN);
 
 		this.changeState(GameState.InRound);
-		this.disableSpawnBarriers(gameMap);
+
+		this.disableSpawnBarriers(gameMap.Team1Spawn);
+		this.disableSpawnBarriers(gameMap.Team2Spawn);
 
 		this.runPhase(0);
 	}
@@ -231,13 +233,13 @@ export class RoundManager implements OnStart {
 		});
 	}
 
-	private disableSpawnBarriers(map: GameMap): void {
-		map.Team1Spawn.SpawnBarriers.GetChildren()
+	private disableSpawnBarriers(teamSpawn: TeamSpawn): void {
+		teamSpawn.SpawnBarriers.GetChildren()
 			.filter((child) => child.IsA("BasePart"))
-			.forEach((barrier) => (barrier.CanCollide = false));
-		map.Team2Spawn.SpawnBarriers.GetChildren()
-			.filter((child) => child.IsA("BasePart"))
-			.forEach((barrier) => (barrier.CanCollide = false));
+			.forEach((barrier) => {
+				barrier.Transparency = 0.8;
+				barrier.CanCollide = false;
+			});
 	}
 
 	private async setPlayerComponents(characterType: CharacterType): Promise<void> {
