@@ -2,7 +2,7 @@ import { OnStart, Service } from "@flamework/core";
 import { AbstractConstructor } from "@flamework/core/out/utility";
 import { PlayerComponent, GamePlayerComponent } from "server/components/players";
 import { Events, Functions } from "server/network";
-import { PlayerRegistry } from "server/services";
+import { PlayerRegistry } from "server/services/players";
 import { BlockActionService, ProjectileActionService } from ".";
 import { ToolType } from "shared/types/toolTypes";
 import { ProjectileHitType } from "shared/types/projectileTypes";

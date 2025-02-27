@@ -1,8 +1,11 @@
+import { Components } from "@flamework/components";
 import { Service } from "@flamework/core";
 import { Players, Workspace } from "@rbxts/services";
 import { GamePlayerComponent } from "server/components/players";
 import { Events, ORIGIN_ERROR_TOLERANCE, PING_ERROR_TOLERANCE } from "server/network";
-import { PlayerRegistry, TurfService } from "server/services";
+import { TurfService } from "server/services";
+import { PlayerRegistry, PlayerStatsManager } from "server/services/players";
+import { BlockComponent } from "shared/components";
 import { Physics } from "shared/modules";
 import { ProjectileHitType, ProjectileRecord } from "shared/types/projectileTypes";
 import { ToolType } from "shared/types/toolTypes";
@@ -11,7 +14,12 @@ import { ToolType } from "shared/types/toolTypes";
 export class ProjectileActionService {
 	private readonly Blocks = Workspace.FindFirstChild("Blocks") as Folder;
 
-	public constructor(private playerRegistry: PlayerRegistry, private turfService: TurfService) {}
+	public constructor(
+		private components: Components,
+		private playerRegistry: PlayerRegistry,
+		private playerStatsManager: PlayerStatsManager,
+		private turfService: TurfService,
+	) {}
 
 	public handleFireProjectile(
 		gamePlayer: GamePlayerComponent,
@@ -89,6 +97,8 @@ export class ProjectileActionService {
 		gamePlayer.projectileCount--;
 		task.delay(config.projectileRefillTime, () => gamePlayer.projectileCount++);
 
+		this.playerStatsManager.incrementStat(gamePlayer.instance, "projectilesFired");
+
 		Events.ProjectileFired.except(gamePlayer.instance, gamePlayer.instance, projectileRecord);
 	}
 
@@ -147,7 +157,12 @@ export class ProjectileActionService {
 				return;
 			}
 
-			// TODO: Damage block
+			const block = this.components.getComponent<BlockComponent>(hitParent);
+			if (!block) {
+				warn(`${gamePlayer.instance.Name} registered a block projectile hit on a part with no block component`);
+				return;
+			}
+			if (block.takeDamage(damage)) this.playerStatsManager.incrementStat(gamePlayer.instance, "blocksDestroyed");
 		} else {
 			const humanoid = hitParent.FindFirstChildOfClass("Humanoid");
 			if (!humanoid) {
@@ -167,9 +182,17 @@ export class ProjectileActionService {
 			print(`${gamePlayer.instance.Name}'s projectile hit ${hitParent.Name} for ${math.round(damage)} damage`);
 
 			if (humanoid.Health <= 0) {
+				this.playerStatsManager.incrementStat(gamePlayer.instance, "kills");
+				this.playerStatsManager.incrementStat(gamePlayer.instance, "damageDealt", damage);
+
 				this.turfService.registerKill(gamePlayer.team);
 
 				print(`${gamePlayer.instance.Name} killed ${hitParent.Name}`);
+
+				if (player) {
+					this.playerStatsManager.incrementStat(player, "deaths");
+					this.playerStatsManager.incrementStat(player, "damageTaken", damage);
+				}
 			}
 		}
 	}

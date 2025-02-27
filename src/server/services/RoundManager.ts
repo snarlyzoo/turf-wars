@@ -1,10 +1,11 @@
 import { Flamework, OnStart, Service } from "@flamework/core";
 import { Players, RunService, ServerStorage, Teams, Workspace } from "@rbxts/services";
 import { Events } from "server/network";
+import { PlayerRegistry, PlayerStatsManager } from "server/services/players";
 import { BlockGrid } from "shared/modules";
 import { CharacterType } from "shared/types/characterTypes";
 import { GameMap, TeamSpawn } from "shared/types/workspaceTypes";
-import { PlayerRegistry, TurfService } from ".";
+import { TurfService } from ".";
 
 enum GameState {
 	WaitingForPlayers = "Waiting for Players",
@@ -76,7 +77,11 @@ export class RoundManager implements OnStart {
 
 	private prevGameMap?: GameMap;
 
-	public constructor(private playerRegistry: PlayerRegistry, private turfService: TurfService) {
+	public constructor(
+		private playerRegistry: PlayerRegistry,
+		private playerStatsManager: PlayerStatsManager,
+		private turfService: TurfService,
+	) {
 		const map = ServerStorage.FindFirstChild("Map");
 		if (!map || !isGameMap(map)) error("No valid map found in server storage");
 		this.GAME_MAP_PREFAB = map;
@@ -127,7 +132,10 @@ export class RoundManager implements OnStart {
 
 		this.turfService.initialize(this.team1, this.team2, gameMap);
 
-		Players.GetPlayers().forEach((player) => this.players.add(player));
+		Players.GetPlayers().forEach((player) => {
+			this.players.add(player);
+			this.playerStatsManager.initializePlayer(player);
+		});
 		this.shuffleTeams();
 		await this.setPlayerComponents(CharacterType.Game);
 
@@ -179,6 +187,7 @@ export class RoundManager implements OnStart {
 
 		this.changeState(GameState.PostRound);
 
+		this.playerStatsManager.clearAllStats();
 		this.players.forEach((player) => (player.Team = this.SPECTATOR_TEAM));
 		await this.setPlayerComponents(CharacterType.Lobby);
 		this.players.clear();

@@ -3,7 +3,8 @@ import { Service } from "@flamework/core";
 import { Workspace } from "@rbxts/services";
 import { GamePlayerComponent } from "server/components/players";
 import { ORIGIN_ERROR_TOLERANCE, PING_ERROR_TOLERANCE } from "server/network";
-import { PlayerRegistry, TurfService } from "server/services";
+import { TurfService } from "server/services";
+import { PlayerRegistry, PlayerStatsManager } from "server/services/players";
 import { BlockComponent } from "shared/components";
 import { BlockGrid } from "shared/modules";
 import { HumanoidCharacterInstance } from "shared/types/characterTypes";
@@ -18,6 +19,7 @@ export class BlockActionService {
 	public constructor(
 		private components: Components,
 		private playerRegistry: PlayerRegistry,
+		private playerStatsManager: PlayerStatsManager,
 		private turfService: TurfService,
 	) {}
 
@@ -53,6 +55,7 @@ export class BlockActionService {
 
 		if (component.takeDamage(config.damage)) {
 			gamePlayer.giveBlocks(1);
+			this.playerStatsManager.incrementStat(gamePlayer.instance, "blocksDestroyed");
 		}
 		gamePlayer.lastDamageBlockTick = tick;
 	}
@@ -93,6 +96,7 @@ export class BlockActionService {
 		this.turfService.registerBlock(BlockGrid.placeBlock(position, gamePlayer.team.TeamColor, config.blockPrefab));
 
 		gamePlayer.blockCount--;
+		this.playerStatsManager.incrementStat(gamePlayer.instance, "blocksPlaced");
 
 		return true;
 	}
