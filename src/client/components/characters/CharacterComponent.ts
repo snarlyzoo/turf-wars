@@ -31,7 +31,7 @@ export abstract class CharacterComponent
 
 	private tiltCharacter!: TiltCharacterComponent;
 
-	public constructor(public controller: CharacterController, protected components: Components) {
+	public constructor(protected controller: CharacterController, protected components: Components) {
 		super();
 	}
 

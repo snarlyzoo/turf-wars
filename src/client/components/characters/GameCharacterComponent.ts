@@ -14,17 +14,6 @@ import { CharacterComponent } from "./CharacterComponent";
 export class GameCharacterComponent extends CharacterComponent implements OnRender {
 	protected override CAMERA_MODE = Enum.CameraMode.LockFirstPerson;
 
-	public ToolEquipped: Signal<(slot: number) => void> = new Signal();
-
-	public get combatEnabled(): boolean {
-		return this._combatEnabled;
-	}
-	public set combatEnabled(value: boolean) {
-		print(`Combat enabled: ${value}`);
-		this._combatEnabled = value;
-	}
-	private _combatEnabled: boolean = false;
-
 	public get tools(): Array<ToolComponent> {
 		return this._tools;
 	}
@@ -37,11 +26,19 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 	private _tools: Array<ToolComponent> = [];
 	private _curTool!: ToolComponent;
 
+	public readonly ToolEquipped: Signal<(slot: number) => void> = new Signal();
+
+	public get viewmodel(): ViewmodelComponent {
+		return this._viewmodel;
+	}
+	private set viewmodel(value: ViewmodelComponent) {
+		this._viewmodel = value;
+	}
+	private _viewmodel!: ViewmodelComponent;
+
 	private chatInputBarConfig?: ChatInputBarConfiguration;
 
 	private toolJoint!: Motor6D;
-
-	private viewmodel!: ViewmodelComponent;
 
 	public override onStart(): void {
 		super.onStart();
@@ -49,12 +46,10 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 		this.fetchChatInputBarConfig();
 
 		this.constructViewmodel();
-		this.constructTools();
+		this.attachToolJointToViewmodel();
 
-		task.spawn(async () => {
-			await this.attachToolJointToViewmodel();
-			this.equipTool(0);
-		});
+		this.constructTools();
+		this.tools[0].AnimationsLoaded.Connect(() => this.equipTool(0));
 
 		this.janitor.Add(this.ToolEquipped);
 	}
@@ -163,7 +158,6 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 
 		this.tools.push(this.components.addComponent<SlingshotComponent>(slingshot));
 		this.tools.push(this.components.addComponent<HammerComponent>(hammer));
-		this.tools.forEach((tool) => tool.initialize(this, this.viewmodel));
 
 		this.janitor.Add(() => {
 			this.unequip();

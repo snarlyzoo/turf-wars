@@ -37,7 +37,9 @@ interface ServerToClientEvents {
 	SetProjectileCount(amount: number): void;
 
 	CharacterTiltChanged: Networking.Unreliable<(character: HumanoidCharacterInstance, angle?: number) => void>;
-	ProjectileFired: Networking.Unreliable<(caster: Player, projectileRecord: ProjectileRecord) => void>;
+	ProjectileFired: Networking.Unreliable<
+		(caster: Player, projectileRecord: ProjectileRecord, pvInstance: PVInstance) => void
+	>;
 }
 
 interface ClientToServerFunctions {

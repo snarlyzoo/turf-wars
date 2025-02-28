@@ -1,13 +1,31 @@
-import { BaseComponent, Component, Components } from "@flamework/components";
+import { Component, Components } from "@flamework/components";
+import { OnStart } from "@flamework/core";
 import Object from "@rbxts/object-utils";
+import Signal from "@rbxts/signal";
 import { GameCharacterComponent } from "client/components/characters";
-import { ViewmodelComponent } from "client/components/characters/addons";
+import { CharacterController } from "client/controllers";
+import { DisposableComponent } from "shared/components";
 import { ResourceType, ToolAnimations, ToolInstance, ToolType } from "shared/types/toolTypes";
 
 @Component()
-export abstract class ToolComponent extends BaseComponent<{}, ToolInstance> {
+export abstract class ToolComponent extends DisposableComponent<{}, ToolInstance> implements OnStart {
 	public abstract readonly toolType: ToolType;
 	public abstract readonly resourceType: ResourceType;
+
+	public get equipped(): boolean {
+		return this._equipped;
+	}
+	protected set equipped(value: boolean) {
+		this._equipped = value;
+	}
+	private _equipped: boolean = false;
+	public get isActive(): boolean {
+		return this._isActive;
+	}
+	protected set isActive(value: boolean) {
+		this._isActive = value;
+	}
+	private _isActive: boolean = false;
 
 	public get mouseIcon(): string {
 		return this._mouseIcon;
@@ -17,38 +35,26 @@ export abstract class ToolComponent extends BaseComponent<{}, ToolInstance> {
 	}
 	private _mouseIcon: string = "rbxassetid://SystemCursors/Arrow";
 
-	public get equipped(): boolean {
-		return this._equipped;
-	}
-	protected set equipped(value: boolean) {
-		this._equipped = value;
-	}
-	public get isActive(): boolean {
-		return this._isActive;
-	}
-	protected set isActive(value: boolean) {
-		this._isActive = value;
-	}
-	private _equipped: boolean = false;
-	private _isActive: boolean = false;
+	public AnimationsLoaded: Signal<() => void> = new Signal();
 
 	protected gameCharacter!: GameCharacterComponent;
-	private viewmodel!: ViewmodelComponent;
 
 	protected charAnimTracks!: Record<keyof ToolAnimations, AnimationTrack>;
 	protected viewmodelAnimTracks!: Record<keyof ToolAnimations, AnimationTrack>;
 
-	public constructor(protected components: Components) {
+	public constructor(protected characterController: CharacterController, protected components: Components) {
 		super();
 	}
 
-	public initialize(gameCharacter: GameCharacterComponent, viewmodel: ViewmodelComponent): void {
-		if (this.gameCharacter || this.viewmodel) error("Tool component already initialized");
-
-		this.gameCharacter = gameCharacter;
-		this.viewmodel = viewmodel;
+	public async onStart(): Promise<void> {
+		const characterComponent = await Promise.fromEvent(this.characterController.CharacterAdded);
+		if (!characterComponent || !(characterComponent instanceof GameCharacterComponent))
+			error("Game character not found");
+		this.gameCharacter = characterComponent;
 
 		this.loadAnimations();
+
+		this.janitor.Add(this.AnimationsLoaded);
 	}
 
 	public equip(): void {
@@ -96,7 +102,7 @@ export abstract class ToolComponent extends BaseComponent<{}, ToolInstance> {
 		};
 
 		try {
-			const viewmodelAnimator = (await this.viewmodel.waitForViewmodel()).Humanoid.Animator;
+			const viewmodelAnimator = (await this.gameCharacter.viewmodel.waitForViewmodel()).Humanoid.Animator;
 			const viewmodelAnimations = this.instance.Animations.Viewmodel;
 			this.viewmodelAnimTracks = {
 				Idle: viewmodelAnimator.LoadAnimation(viewmodelAnimations.Idle),
@@ -107,5 +113,7 @@ export abstract class ToolComponent extends BaseComponent<{}, ToolInstance> {
 		}
 
 		print(`Animation tracks loaded for ${this.instance.Name}`);
+
+		this.AnimationsLoaded.Fire();
 	}
 }

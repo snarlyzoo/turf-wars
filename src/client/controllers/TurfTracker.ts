@@ -5,7 +5,7 @@ import { BlockGrid } from "shared/modules";
 
 @Controller()
 export class TurfTracker implements OnStart {
-	public TurfChanged: Signal<() => void> = new Signal();
+	public readonly TurfChanged: Signal<() => void> = new Signal();
 
 	private team1?: Team;
 	private team2?: Team;

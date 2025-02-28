@@ -93,7 +93,9 @@ export class BlockActionService {
 			return false;
 		}
 
-		this.turfService.registerBlock(BlockGrid.placeBlock(position, gamePlayer.team.TeamColor, config.blockPrefab));
+		this.turfService.registerBlock(
+			BlockGrid.placeBlock(position, gamePlayer.team.TeamColor, gamePlayer.blockPrefab),
+		);
 
 		gamePlayer.blockCount--;
 		this.playerStatsManager.incrementStat(gamePlayer.instance, "blocksPlaced");

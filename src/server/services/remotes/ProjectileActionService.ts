@@ -12,6 +12,8 @@ import { ToolType } from "shared/types/toolTypes";
 
 @Service()
 export class ProjectileActionService {
+	private readonly PROJECTILE_REFILL_TIME: number = 5;
+
 	private readonly Blocks = Workspace.FindFirstChild("Blocks") as Folder;
 
 	public constructor(
@@ -95,11 +97,16 @@ export class ProjectileActionService {
 		gamePlayer.lastFireProjectileTick = tick;
 
 		gamePlayer.projectileCount--;
-		task.delay(config.projectileRefillTime, () => gamePlayer.projectileCount++);
+		task.delay(this.PROJECTILE_REFILL_TIME, () => gamePlayer.projectileCount++);
 
 		this.playerStatsManager.incrementStat(gamePlayer.instance, "projectilesFired");
 
-		Events.ProjectileFired.except(gamePlayer.instance, gamePlayer.instance, projectileRecord);
+		Events.ProjectileFired.except(
+			gamePlayer.instance,
+			gamePlayer.instance,
+			projectileRecord,
+			gamePlayer.projectilePrefab,
+		);
 	}
 
 	public handleRegisterProjectileHit(

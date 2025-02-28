@@ -1,7 +1,5 @@
 import { Component } from "@flamework/components";
 import { Players, Workspace } from "@rbxts/services";
-import { GameCharacterComponent } from "client/components/characters";
-import { ViewmodelComponent } from "client/components/characters/addons";
 import { Events } from "client/network";
 import { BlockComponent } from "shared/components";
 import { ProjectileCaster } from "shared/modules";
@@ -12,6 +10,8 @@ import { ToolComponent } from "./ToolComponent";
 
 @Component()
 export class SlingshotComponent extends ToolComponent {
+	private readonly PROJECTILE_REFILL_TIME: number = 5;
+
 	public override toolType = ToolType.Slingshot;
 	public override resourceType = ResourceType.Projectile;
 
@@ -23,8 +23,8 @@ export class SlingshotComponent extends ToolComponent {
 
 	private projectileImpactEvent = new Instance("BindableEvent");
 
-	public override initialize(character: GameCharacterComponent, viewmodel: ViewmodelComponent): void {
-		super.initialize(character, viewmodel);
+	public override async onStart(): Promise<void> {
+		await super.onStart();
 
 		this.mouseIcon = "rbxassetid://textures/GunCursor.png";
 
@@ -44,17 +44,17 @@ export class SlingshotComponent extends ToolComponent {
 	private fireProjectile(toFire: boolean): void {
 		this.toFire = toFire;
 		if (!this.equipped || this.isActive || !this.toFire) return;
-		if (!this.gameCharacter.combatEnabled || this.gameCharacter.controller.projectileCount <= 0) return;
+		if (!this.characterController.combatEnabled || this.characterController.projectileCount <= 0) return;
 
 		this.isActive = true;
 
 		let speed = this.config.projectile.startSpeed;
 		const tick = os.clock();
-		while (this.equipped && this.toFire && this.gameCharacter.combatEnabled) task.wait();
+		while (this.equipped && this.toFire && this.characterController.combatEnabled) task.wait();
 		speed = math.min(speed + this.config.drawSpeed * (os.clock() - tick), this.config.projectile.maxSpeed);
 
-		if (this.equipped && this.gameCharacter.combatEnabled) {
-			const camCFrame = this.gameCharacter.controller.camera.CFrame;
+		if (this.equipped && this.characterController.combatEnabled) {
+			const camCFrame = this.characterController.camera.CFrame;
 
 			const timestamp = Workspace.GetServerTimeNow();
 			Events.FireProjectile.fire(camCFrame.Position, camCFrame.LookVector, speed, timestamp);
@@ -65,7 +65,7 @@ export class SlingshotComponent extends ToolComponent {
 
 			const projectileModifier: ProjectileModifier = {
 				speed: speed,
-				pvInstance: this.config.projectile.pvInstance,
+				pvInstance: this.characterController.projectilePrefab,
 				color: this.teamColor.Color,
 				timestamp: timestamp,
 				onImpact: this.projectileImpactEvent,
@@ -77,8 +77,8 @@ export class SlingshotComponent extends ToolComponent {
 				projectileModifier,
 			);
 
-			this.gameCharacter.controller.projectileCount--;
-			task.delay(this.config.projectileRefillTime, () => this.gameCharacter.controller.projectileCount++);
+			this.characterController.projectileCount--;
+			task.delay(this.PROJECTILE_REFILL_TIME, () => this.characterController.projectileCount++);
 
 			task.wait(60 / this.config.rateOfFire);
 		}
@@ -87,7 +87,7 @@ export class SlingshotComponent extends ToolComponent {
 	}
 
 	private fetchTeamColor(): void {
-		let teamColor = this.gameCharacter.controller.team.TeamColor;
+		let teamColor = this.characterController.team.TeamColor;
 		if (!teamColor) {
 			warn("Player does not have a team color");
 			teamColor = new BrickColor("Medium stone grey");
@@ -109,7 +109,7 @@ export class SlingshotComponent extends ToolComponent {
 		let projectileHitType: ProjectileHitType;
 		if (hitPart.HasTag("Block")) {
 			const block = this.components.getComponent<BlockComponent>(hitPart);
-			if (!block || block.attributes.TeamColor === this.gameCharacter.controller.team.TeamColor) return;
+			if (!block || block.attributes.TeamColor === this.characterController.team.TeamColor) return;
 
 			projectileHitType = ProjectileHitType.Block;
 		} else {
@@ -120,7 +120,7 @@ export class SlingshotComponent extends ToolComponent {
 			if (!humanoid || humanoid.Health <= 0) return;
 
 			const player = Players.GetPlayerFromCharacter(character);
-			if (player && player.Team === this.gameCharacter.controller.team) return;
+			if (player && player.Team === this.characterController.team) return;
 
 			hitName = `${character.Name}'s ${hitPart.Name}`;
 			projectileHitType = ProjectileHitType.Character;

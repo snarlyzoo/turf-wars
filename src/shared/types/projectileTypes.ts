@@ -33,8 +33,6 @@ export type ProjectileConfig = {
 		baseDamage: number;
 		speedMultiplier: number;
 	};
-
-	pvInstance?: PVInstance;
 };
 
 export type ProjectileModifier = {

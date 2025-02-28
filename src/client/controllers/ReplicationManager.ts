@@ -14,7 +14,9 @@ class ReplicationManager implements OnStart {
 
 	public onStart(): void {
 		Events.CharacterTiltChanged.connect((character, angle) => this.onCharacterTiltChanged(character, angle));
-		Events.ProjectileFired.connect((caster, projectileRecord) => this.onProjectileFired(caster, projectileRecord));
+		Events.ProjectileFired.connect((caster, projectileRecord, pvInstance) =>
+			this.onProjectileFired(caster, projectileRecord, pvInstance),
+		);
 	}
 
 	private onCharacterTiltChanged(character: HumanoidCharacterInstance, angle?: number): void {
@@ -31,7 +33,7 @@ class ReplicationManager implements OnStart {
 		tiltCharacter.update(angle);
 	}
 
-	private onProjectileFired(caster: Player, projectileRecord: ProjectileRecord): void {
+	private onProjectileFired(caster: Player, projectileRecord: ProjectileRecord, pvInstance: PVInstance): void {
 		const raycastParams = new RaycastParams();
 
 		const character = caster.Character;
@@ -45,7 +47,7 @@ class ReplicationManager implements OnStart {
 			speed: projectileRecord.speed,
 			gravity: config.gravity,
 			lifetime: config.lifetime,
-			pvInstance: config.pvInstance,
+			pvInstance: pvInstance,
 			color: caster.TeamColor.Color,
 		};
 		ProjectileCaster.castProjectile(

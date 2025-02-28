@@ -1,12 +1,13 @@
 import { Component } from "@flamework/components";
-import { PlayerComponent } from "./PlayerComponent";
 import { Flamework, OnTick } from "@flamework/core";
+import { ReplicatedStorage } from "@rbxts/services";
+import { TurfService } from "server/services";
+import { Events } from "server/network";
 import { HammerConfig, SlingshotConfig, ToolInstance, ToolType } from "shared/types/toolTypes";
 import { ProjectileRecord } from "shared/types/projectileTypes";
 import { CharacterType, R15CharacterInstance, R6CharacterInstance } from "shared/types/characterTypes";
 import { findFirstChildWithTag, getHammerConfig, getSlingshotConfig } from "shared/utility";
-import { TurfService } from "server/services";
-import { Events } from "server/network";
+import { PlayerComponent } from "./PlayerComponent";
 
 type ToolConfigMap = {
 	[ToolType.Slingshot]: SlingshotConfig;
@@ -29,22 +30,27 @@ export class GamePlayerComponent extends PlayerComponent implements OnTick {
 	public set blockCount(value: number) {
 		this._blockCount = value;
 	}
+	private _blockCount: number = 0;
+	public lastDamageBlockTick: number = 0;
+
+	// TODO: Find a better way to reference these objects
+	public blockPrefab = ReplicatedStorage.FindFirstChild("Block") as BasePart;
+
 	public get projectileCount(): number {
 		return this._projectileCount;
 	}
 	public set projectileCount(value: number) {
 		this._projectileCount = value;
 	}
-	private _blockCount: number = 0;
 	private _projectileCount: number = 0;
-
-	public lastDamageBlockTick: number = 0;
 	public lastFireProjectileTick: number = 0;
 
 	public get projectileRecords(): Map<number, ProjectileRecord> {
 		return this._projectileRecords;
 	}
 	private _projectileRecords: Map<number, ProjectileRecord> = new Map();
+
+	public projectilePrefab = ReplicatedStorage.FindFirstChild("Projectile") as PVInstance;
 
 	private lastTurfKickTick: number = 0;
 

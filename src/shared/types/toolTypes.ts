@@ -33,14 +33,10 @@ export type HammerConfig = {
 
 	damage: number;
 	rateOfDamage: number;
-
-	blockPrefab: BasePart;
-	targetIndicator: TargetIndicator;
 };
 
 export type SlingshotConfig = {
 	drawSpeed: number;
 	projectile: ProjectileConfig;
 	rateOfFire: number;
-	projectileRefillTime: number;
 };

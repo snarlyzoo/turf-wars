@@ -1,9 +1,7 @@
 import { Component, Components } from "@flamework/components";
 import { OnRender } from "@flamework/core";
 import { Workspace } from "@rbxts/services";
-import { GameCharacterComponent } from "client/components/characters";
-import { ViewmodelComponent } from "client/components/characters/addons";
-import { TurfTracker } from "client/controllers";
+import { CharacterController, TurfTracker } from "client/controllers";
 import { Events, Functions } from "client/network";
 import { BlockComponent } from "shared/components";
 import { BlockGrid } from "shared/modules";
@@ -29,23 +27,27 @@ export class HammerComponent extends ToolComponent implements OnRender {
 
 	private config!: HammerConfig;
 
-	public constructor(protected components: Components, private turfTracker: TurfTracker) {
-		super(components);
+	public constructor(
+		protected characterController: CharacterController,
+		protected components: Components,
+		private turfTracker: TurfTracker,
+	) {
+		super(characterController, components);
 	}
 
-	public override initialize(character: GameCharacterComponent, viewmodel: ViewmodelComponent): void {
-		super.initialize(character, viewmodel);
+	public override async onStart(): Promise<void> {
+		await super.onStart();
 
 		this.config = getHammerConfig(this.instance.FindFirstChildOfClass("Configuration"));
 
-		this.targetIndicator = this.config.targetIndicator.Clone();
-		this.targetIndicator.Parent = this.gameCharacter.controller.camera;
+		this.targetIndicator = this.characterController.targetIndicator.Clone();
+		this.targetIndicator.Parent = this.characterController.camera;
 	}
 
 	public onRender(): void {
 		if (!this.equipped) return;
 
-		const camCFrame = this.gameCharacter.controller.camera.CFrame;
+		const camCFrame = this.characterController.camera.CFrame;
 
 		const raycastParams = new RaycastParams();
 		raycastParams.FilterDescendantsInstances = [BlockGrid.Folder, this.Map];
@@ -98,10 +100,7 @@ export class HammerComponent extends ToolComponent implements OnRender {
 		this.isActive = true;
 
 		while (this.equipped && this.toDelete) {
-			if (
-				this.targetBlock &&
-				this.targetBlock.attributes.TeamColor === this.gameCharacter.controller.team.TeamColor
-			) {
+			if (this.targetBlock && this.targetBlock.attributes.TeamColor === this.characterController.team.TeamColor) {
 				this.targetBlock.takeDamage(this.config.damage);
 				Events.DamageBlock.fire(this.targetBlock.instance);
 
@@ -115,20 +114,19 @@ export class HammerComponent extends ToolComponent implements OnRender {
 	}
 
 	private placeBlock(): void {
-		if (!this.equipped || this.isActive || this.gameCharacter.controller.blockCount <= 0) return;
+		if (!this.equipped || this.isActive || this.characterController.blockCount <= 0) return;
 
-		if (!this.placePos || !this.turfTracker.isPositionOnTurf(this.placePos, this.gameCharacter.controller.team))
-			return;
+		if (!this.placePos || !this.turfTracker.isPositionOnTurf(this.placePos, this.characterController.team)) return;
 
 		if (Workspace.GetPartBoundsInBox(new CFrame(this.placePos), this.BLOCK_OVERLAP_SIZE).size() > 0) return;
 
 		const block = BlockGrid.placeBlock(
 			this.placePos,
-			this.gameCharacter.controller.team.TeamColor,
-			this.config.blockPrefab,
+			this.characterController.team.TeamColor,
+			this.characterController.blockPrefab,
 		);
 		Functions.PlaceBlock.invoke(this.placePos).then((success) => {
-			if (success) this.gameCharacter.controller.blockCount--;
+			if (success) this.characterController.blockCount--;
 			block.Destroy();
 		});
 	}

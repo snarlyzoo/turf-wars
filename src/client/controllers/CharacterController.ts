@@ -1,12 +1,13 @@
 import { Components } from "@flamework/components";
 import { Controller, OnStart } from "@flamework/core";
 import { AbstractConstructor } from "@flamework/core/out/utility";
-import { ContextActionService, Players, Workspace } from "@rbxts/services";
+import { ContextActionService, Players, ReplicatedStorage, Workspace } from "@rbxts/services";
 import Signal from "@rbxts/signal";
 import { CharacterComponent, GameCharacterComponent, LobbyCharacterComponent } from "client/components/characters";
 import { Events } from "client/network";
 import { CHARACTER_EVENT_RATE_LIMIT, TOOL_EVENT_RATE_LIMIT } from "shared/network";
 import { CharacterType } from "shared/types/characterTypes";
+import { TargetIndicator } from "shared/types/toolTypes";
 
 enum BaseAction {
 	Sneak = "Sneak",
@@ -55,8 +56,16 @@ export class CharacterController implements OnStart {
 	private _camera!: Camera;
 	private _backpack!: Backpack;
 
-	public CharacterAdded: Signal<(characterComponent: CharacterComponent) => void> = new Signal();
-	public CharacterRemoved: Signal<() => void> = new Signal();
+	public get combatEnabled(): boolean {
+		return this._combatEnabled;
+	}
+	private set combatEnabled(value: boolean) {
+		this._combatEnabled = value;
+	}
+	private _combatEnabled: boolean = false;
+
+	public readonly CharacterAdded: Signal<(characterComponent: CharacterComponent) => void> = new Signal();
+	public readonly CharacterRemoved: Signal<() => void> = new Signal();
 
 	public get blockCount(): number {
 		return this._blockCount;
@@ -65,6 +74,13 @@ export class CharacterController implements OnStart {
 		this._blockCount = value;
 		this.BlockCountChanged.Fire(value);
 	}
+	private _blockCount: number = 0;
+	public readonly BlockCountChanged: Signal<(amount: number) => void> = new Signal();
+
+	// TODO: Find a better way to reference these objects
+	public blockPrefab = ReplicatedStorage.FindFirstChild("Block") as BasePart;
+	public targetIndicator = ReplicatedStorage.FindFirstChild("TargetIndicator") as TargetIndicator;
+
 	public get projectileCount(): number {
 		return this._projectileCount;
 	}
@@ -72,16 +88,13 @@ export class CharacterController implements OnStart {
 		this._projectileCount = value;
 		this.ProjectileCountChanged.Fire(value);
 	}
-	private _blockCount: number = 0;
 	private _projectileCount: number = 0;
+	public readonly ProjectileCountChanged: Signal<(amount: number) => void> = new Signal();
 
-	public BlockCountChanged: Signal<(amount: number) => void> = new Signal();
-	public ProjectileCountChanged: Signal<(amount: number) => void> = new Signal();
+	public projectilePrefab = ReplicatedStorage.FindFirstChild("Projectile") as PVInstance;
 
 	private characterType: CharacterType = CharacterType.Lobby;
 	private characterComponent?: CharacterComponent;
-
-	private combatEnabled: boolean = false;
 
 	private lastCharacterEventTick: number = 0;
 	private lastToolEventTick: number = 0;
@@ -132,11 +145,15 @@ export class CharacterController implements OnStart {
 		this.player.CharacterAdded.Connect((character) => this.onCharacterAdded(character));
 		this.player.CharacterRemoving.Connect((character) => this.onCharacterRemoving(character));
 
-		Events.SetCombatEnabled.connect((enabled) => this.onSetCombatEnabled(enabled));
+		Events.SetCombatEnabled.connect((enabled) => (this.combatEnabled = enabled));
 		Events.SetCharacterType.connect((characterType) => (this.characterType = characterType));
 
 		Events.SetBlockCount.connect((amount) => (this.blockCount = amount));
 		Events.SetProjectileCount.connect((amount) => (this.projectileCount = amount));
+	}
+
+	public getCharacterComponent<T extends CharacterComponent>(componentClass: AbstractConstructor<T>): T | undefined {
+		return this.characterComponent instanceof componentClass ? this.characterComponent : undefined;
 	}
 
 	private fetchPlayerObjects(): void {
@@ -170,10 +187,6 @@ export class CharacterController implements OnStart {
 		return [true, tick];
 	}
 
-	private getCharacterComponent<T extends CharacterComponent>(componentClass: AbstractConstructor<T>): T | undefined {
-		return this.characterComponent instanceof componentClass ? this.characterComponent : undefined;
-	}
-
 	private onCharacterAdded(character: Model): void {
 		print("Character added");
 
@@ -187,7 +200,6 @@ export class CharacterController implements OnStart {
 		switch (this.characterType) {
 			case CharacterType.Game:
 				characterComponent = this.components.addComponent<GameCharacterComponent>(character);
-				(characterComponent as GameCharacterComponent).combatEnabled = this.combatEnabled;
 				this.bindInputActions(this.gameInputActions);
 				break;
 			case CharacterType.Lobby:
@@ -220,12 +232,6 @@ export class CharacterController implements OnStart {
 		this.characterComponent = undefined;
 
 		this.CharacterRemoved.Fire();
-	}
-
-	private onSetCombatEnabled(enabled: boolean): void {
-		this.combatEnabled = enabled;
-		if (this.characterComponent instanceof GameCharacterComponent)
-			this.characterComponent.combatEnabled = this.combatEnabled;
 	}
 
 	private onSneak(inputState: Enum.UserInputState): void {
