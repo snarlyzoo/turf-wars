@@ -1,4 +1,5 @@
 export enum CharacterType {
+	None = "None",
 	Lobby = "Lobby",
 	Game = "Game",
 }

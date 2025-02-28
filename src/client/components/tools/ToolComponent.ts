@@ -12,6 +12,8 @@ export abstract class ToolComponent extends DisposableComponent<{}, ToolInstance
 	public abstract readonly toolType: ToolType;
 	public abstract readonly resourceType: ResourceType;
 
+	public abstract readonly hasSecondaryAction: boolean;
+
 	public get equipped(): boolean {
 		return this._equipped;
 	}

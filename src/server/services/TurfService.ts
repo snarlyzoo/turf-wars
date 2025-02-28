@@ -95,6 +95,11 @@ export class TurfService {
 		this.turfPerKill = turfPerKill;
 	}
 
+	public getWinningTeam(): Team | undefined {
+		if (!this.validateTeams()) return;
+		return this.team1Turf >= BlockGrid.DIMENSIONS.X / 2 ? this.team1 : this.team2;
+	}
+
 	private validateTeams(): boolean {
 		if (!this.team1 || !this.team2) {
 			warn("Teams have not been set");

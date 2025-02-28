@@ -1,11 +1,11 @@
-import { Dependency } from "@flamework/core";
 import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
 import React, { useEffect, useState } from "@rbxts/react";
 import { Players } from "@rbxts/services";
-import { TurfTracker } from "client/controllers";
+import { CharacterController, TurfTracker } from "client/controllers";
 import { Events } from "client/network";
 import { ProgressBar } from "client/ui/elements";
 import { BlockGrid } from "shared/modules";
+import { MVPStage } from "shared/types/workspaceTypes";
 
 const player = Players.LocalPlayer;
 
@@ -20,10 +20,18 @@ export const RoundHUD = (): React.Element => {
 	const [phaseName, setPhaseName] = useState("Waiting for Players");
 	const [teamTurf, setTeamTurf] = useState(0);
 
+	const characterController = useFlameworkDependency<CharacterController>();
 	const turfTracker = useFlameworkDependency<TurfTracker>();
 
 	useEffect(() => {
 		const connections: Array<RBXScriptConnection> = [];
+
+		connections.push(
+			Events.RoundEnding.connect((_, mvpStage: MVPStage) => {
+				characterController.camera.CameraType = Enum.CameraType.Scriptable;
+				characterController.camera.CFrame = mvpStage.CameraPos.GetPivot();
+			}),
+		);
 
 		connections.push(
 			Events.SetGameClock.connect((time, phaseName) => {

@@ -14,9 +14,15 @@ interface PlayerStats {
 	projectilesFired: number;
 }
 
+interface Leaderstats extends Folder {
+	Kills: IntValue;
+	Deaths: IntValue;
+}
+
 @Service()
 export class PlayerStatsManager implements OnStart {
 	private playerStats: Map<Player, PlayerStats> = new Map();
+	private leaderstats: Map<Player, Leaderstats> = new Map();
 
 	public onStart(): void {
 		Players.PlayerAdded.Connect((player) => this.onPlayerAdded(player));
@@ -42,18 +48,42 @@ export class PlayerStatsManager implements OnStart {
 		}
 		stats[stat] += amount;
 
-		if (stat === "kills" || stat === "deaths") {
-			const leaderstats = player.FindFirstChild("leaderstats");
-			if (!leaderstats) return;
-
-			const statValue = leaderstats.FindFirstChild(stat.sub(1, 1).upper() + stat.sub(2));
-			if (!statValue || !statValue.IsA("IntValue")) return;
-			statValue.Value = stats[stat];
+		const leaderstats = this.leaderstats.get(player);
+		if (!leaderstats) {
+			warn(`Player ${player.Name} does not have leaderstats initialized`);
+			return;
 		}
+		switch (stat) {
+			case "kills":
+				leaderstats.Kills.Value += amount;
+				break;
+			case "deaths":
+				leaderstats.Deaths.Value += amount;
+				break;
+		}
+	}
+
+	public getMVPs(team: Team): Array<Player> {
+		const sortedPlayers = team.GetPlayers().sort((a, b) => {
+			const aKills = this.playerStats.get(a)?.kills ?? 0;
+			const bKills = this.playerStats.get(b)?.kills ?? 0;
+			return bKills > aKills;
+		});
+
+		const mvpPlayers = new Array<Player>();
+		for (let i = 0; i < math.min(3, sortedPlayers.size()); i++) {
+			mvpPlayers.push(sortedPlayers[i]);
+		}
+		return mvpPlayers;
 	}
 
 	public clearAllStats(): void {
 		this.playerStats.clear();
+
+		this.leaderstats.forEach((leaderstats) => {
+			leaderstats.Kills.Value = 0;
+			leaderstats.Deaths.Value = 0;
+		});
 	}
 
 	private onPlayerAdded(player: Player): void {
@@ -68,5 +98,7 @@ export class PlayerStatsManager implements OnStart {
 		const deaths = new Instance("IntValue");
 		deaths.Name = "Deaths";
 		deaths.Parent = leaderstats;
+
+		this.leaderstats.set(player, leaderstats as Leaderstats);
 	}
 }

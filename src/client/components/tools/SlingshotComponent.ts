@@ -15,6 +15,8 @@ export class SlingshotComponent extends ToolComponent {
 	public override toolType = ToolType.Slingshot;
 	public override resourceType = ResourceType.Projectile;
 
+	public override hasSecondaryAction = false;
+
 	private toFire: boolean = false;
 
 	private teamColor!: BrickColor;

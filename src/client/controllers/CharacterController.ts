@@ -8,6 +8,7 @@ import { Events } from "client/network";
 import { CHARACTER_EVENT_RATE_LIMIT, TOOL_EVENT_RATE_LIMIT } from "shared/network";
 import { CharacterType } from "shared/types/characterTypes";
 import { TargetIndicator } from "shared/types/toolTypes";
+import { MVPStage } from "shared/types/workspaceTypes";
 
 enum BaseAction {
 	Sneak = "Sneak",
@@ -188,11 +189,16 @@ export class CharacterController implements OnStart {
 	}
 
 	private onCharacterAdded(character: Model): void {
+		if (this.characterType === CharacterType.None) return;
+
 		print("Character added");
 
 		this.fetchPlayerObjects();
 
 		character.WaitForChild("HumanoidRootPart");
+
+		this.camera.CameraType = Enum.CameraType.Custom;
+		this.camera.CameraSubject = character.FindFirstChild("Humanoid") as Humanoid;
 
 		print(`Constructing ${this.characterType} character component...`);
 
@@ -274,14 +280,17 @@ export class CharacterController implements OnStart {
 		const gameCharacter = this.getCharacterComponent(GameCharacterComponent);
 		if (!gameCharacter) return;
 
+		const tool = gameCharacter.getCurrentTool();
+		if (!tool) return;
+
 		if (inputState === Enum.UserInputState.Begin) {
 			const [allowed, tick] = this.canFireEvent(this.lastToolEventTick, TOOL_EVENT_RATE_LIMIT);
 			if (!allowed) return;
 			this.lastToolEventTick = tick;
 
-			isPrimaryAction ? gameCharacter.curTool.usePrimaryAction(true) : gameCharacter.curTool.useSecondaryAction();
+			isPrimaryAction ? tool.usePrimaryAction(true) : tool.hasSecondaryAction && tool.useSecondaryAction();
 		} else if (inputState === Enum.UserInputState.End && isPrimaryAction) {
-			gameCharacter.curTool.usePrimaryAction(false);
+			tool.usePrimaryAction(false);
 		}
 	}
 }

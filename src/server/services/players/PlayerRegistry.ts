@@ -25,23 +25,32 @@ export class PlayerRegistry implements OnStart {
 	}
 
 	public setPlayerComponent(player: Player, characterType: CharacterType, loadCharacter: boolean = true): void {
-		print(`Constructing ${characterType} player component for ${player.Name}...`);
-
 		let playerComponent = this.getPlayerComponent(player);
 		if (playerComponent) {
 			this.destroyPlayerComponent(playerComponent);
 		}
 
-		if (characterType === CharacterType.Game) {
-			playerComponent = this.components.addComponent<GamePlayerComponent>(player);
-		} else {
-			playerComponent = this.components.addComponent<LobbyPlayerComponent>(player);
+		if (characterType !== CharacterType.None) {
+			print(`Constructing ${characterType} player component for ${player.Name}...`);
+
+			switch (characterType) {
+				case CharacterType.Game:
+					playerComponent = this.components.addComponent<GamePlayerComponent>(player);
+					break;
+				case CharacterType.Lobby:
+					playerComponent = this.components.addComponent<LobbyPlayerComponent>(player);
+					break;
+				default:
+					error(`Invalid character type ${characterType}`);
+			}
+			this.playerComponents.set(player.UserId, playerComponent);
+
+			print(`${characterType} player component constructed for ${player.Name}`);
 		}
-		this.playerComponents.set(player.UserId, playerComponent);
+
+		Events.SetCharacterType.fire(player, characterType);
 
 		if (loadCharacter) player.LoadCharacter();
-
-		print(`${characterType} player component constructed for ${player.Name}`);
 	}
 
 	public setCombatEnabled(enabled: boolean): void {

@@ -17,14 +17,7 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 	public get tools(): Array<ToolComponent> {
 		return this._tools;
 	}
-	public get curTool(): ToolComponent {
-		return this._curTool;
-	}
-	private set curTool(value: ToolComponent) {
-		this._curTool = value;
-	}
 	private _tools: Array<ToolComponent> = [];
-	private _curTool!: ToolComponent;
 
 	public readonly ToolEquipped: Signal<(slot: number) => void> = new Signal();
 
@@ -35,6 +28,8 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 		this._viewmodel = value;
 	}
 	private _viewmodel!: ViewmodelComponent;
+
+	private curTool!: ToolComponent | undefined;
 
 	private chatInputBarConfig?: ChatInputBarConfiguration;
 
@@ -124,6 +119,10 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 		this.toolJoint.Part1 = undefined;
 
 		return true;
+	}
+
+	public getCurrentTool(): ToolComponent | undefined {
+		return this.curTool;
 	}
 
 	private fetchChatInputBarConfig(): void {

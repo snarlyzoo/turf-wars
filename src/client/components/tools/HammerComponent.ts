@@ -18,6 +18,8 @@ export class HammerComponent extends ToolComponent implements OnRender {
 	public override toolType = ToolType.Hammer;
 	public override resourceType = ResourceType.Block;
 
+	public override hasSecondaryAction = true;
+
 	private toDelete: boolean = false;
 
 	private placePos?: Vector3;

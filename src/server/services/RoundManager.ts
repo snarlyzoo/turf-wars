@@ -4,7 +4,7 @@ import { Events } from "server/network";
 import { PlayerRegistry, PlayerStatsManager } from "server/services/players";
 import { BlockGrid } from "shared/modules";
 import { CharacterType } from "shared/types/characterTypes";
-import { GameMap, TeamSpawn } from "shared/types/workspaceTypes";
+import { GameMap, MVPStage, TeamSpawn } from "shared/types/workspaceTypes";
 import { TurfService } from ".";
 
 enum GameState {
@@ -46,6 +46,7 @@ export class RoundManager implements OnStart {
 
 	private readonly INTERMISSION_TIME: number = 60;
 	private readonly ROUND_START_COUNTDOWN: number = 10;
+	private readonly MVP_DISPLAY_TIME: number = 10;
 
 	private readonly PHASE_SEQUENCE: Phase[] = [
 		{ Type: PhaseType.Build, Duration: 40, initialBlockCount: 32 },
@@ -75,7 +76,7 @@ export class RoundManager implements OnStart {
 	private team1: Team = Teams.FindFirstChild("Blue Team") as Team;
 	private team2: Team = Teams.FindFirstChild("Red Team") as Team;
 
-	private prevGameMap?: GameMap;
+	private gameMap?: GameMap;
 
 	public constructor(
 		private playerRegistry: PlayerRegistry,
@@ -90,9 +91,10 @@ export class RoundManager implements OnStart {
 			this.MIN_PLAYER_COUNT = 1;
 			this.INTERMISSION_TIME = 2;
 			this.ROUND_START_COUNTDOWN = 2;
+			this.MVP_DISPLAY_TIME = 2;
 			this.PHASE_SEQUENCE = [
-				{ Type: PhaseType.Build, Duration: 5, initialBlockCount: 32 },
-				{ Type: PhaseType.Combat, Duration: 60, initialProjectileCount: 16 },
+				{ Type: PhaseType.Build, Duration: 2, initialBlockCount: 32 },
+				{ Type: PhaseType.Combat, Duration: 2, initialProjectileCount: 16 },
 			];
 		}
 	}
@@ -125,12 +127,12 @@ export class RoundManager implements OnStart {
 		});
 		if (!gameMap) return;
 
-		this.prevGameMap?.Destroy();
-		this.prevGameMap = gameMap;
+		this.gameMap?.Destroy();
+		this.gameMap = gameMap;
 
 		print("Game map loaded");
 
-		this.turfService.initialize(this.team1, this.team2, gameMap);
+		this.turfService.initialize(this.team1, this.team2, this.gameMap);
 
 		Players.GetPlayers().forEach((player) => {
 			this.players.add(player);
@@ -146,8 +148,8 @@ export class RoundManager implements OnStart {
 
 		this.changeState(GameState.InRound);
 
-		this.disableSpawnBarriers(gameMap.Team1Spawn);
-		this.disableSpawnBarriers(gameMap.Team2Spawn);
+		this.disableSpawnBarriers(this.gameMap.Team1Spawn);
+		this.disableSpawnBarriers(this.gameMap.Team2Spawn);
 
 		this.runPhase(0);
 	}
@@ -187,6 +189,18 @@ export class RoundManager implements OnStart {
 
 		this.changeState(GameState.PostRound);
 
+		if (this.gameMap) {
+			await this.setPlayerComponents(CharacterType.None);
+
+			const winningTeam = this.turfService.getWinningTeam() ?? this.team1;
+			const mvpStage = (winningTeam === this.team1 ? this.gameMap.Team1Spawn : this.gameMap.Team2Spawn).MVPStage;
+			Events.RoundEnding.broadcast(winningTeam, mvpStage);
+
+			await this.displayMVPs(winningTeam, mvpStage);
+		} else {
+			warn("Game map not found");
+		}
+
 		this.playerStatsManager.clearAllStats();
 		this.players.forEach((player) => (player.Team = this.SPECTATOR_TEAM));
 		await this.setPlayerComponents(CharacterType.Lobby);
@@ -213,9 +227,9 @@ export class RoundManager implements OnStart {
 	private isMapReady(map: GameMap): boolean {
 		return (
 			map.TurfLines !== undefined &&
+			map.TurfLines.GetChildren().size() >= BlockGrid.DIMENSIONS.X &&
 			map.Team1Spawn !== undefined &&
 			map.Team2Spawn !== undefined &&
-			map.TurfLines.GetChildren().size() >= BlockGrid.DIMENSIONS.X &&
 			map.Team1Spawn.SpawnBarriers !== undefined &&
 			map.Team1Spawn.SpawnLocations !== undefined &&
 			map.Team2Spawn.SpawnBarriers !== undefined &&
@@ -249,6 +263,33 @@ export class RoundManager implements OnStart {
 				barrier.Transparency = 0.8;
 				barrier.CanCollide = false;
 			});
+	}
+
+	private async displayMVPs(winningTeam: Team, mvpStage: MVPStage): Promise<void> {
+		await this.setPlayerComponents(CharacterType.None);
+
+		const positions = [mvpStage.Player1Pos, mvpStage.Player2Pos, mvpStage.Player3Pos];
+		const mvpPlayers = this.playerStatsManager.getMVPs(winningTeam);
+		for (let i = 0; i < mvpPlayers.size(); i++) {
+			const character = mvpPlayers[i].Character;
+			if (!character) {
+				warn(`Player ${mvpPlayers[i].Name} does not have a character`);
+				continue;
+			}
+
+			const rootPart = character.PrimaryPart;
+			const humanoid = character.FindFirstChildOfClass("Humanoid");
+			if (!rootPart || !humanoid) {
+				warn(`Character for ${mvpPlayers[i].Name} is missing parts`);
+				continue;
+			}
+			character.PivotTo(positions[i].GetPivot().add(new Vector3(0, humanoid.HipHeight + rootPart.Size.Y / 2, 0)));
+			rootPart.Anchored = true;
+		}
+
+		print(`MVPs: ${mvpPlayers.map((player) => player.Name).join(", ")}`);
+
+		await Promise.delay(this.MVP_DISPLAY_TIME);
 	}
 
 	private async setPlayerComponents(characterType: CharacterType): Promise<void> {

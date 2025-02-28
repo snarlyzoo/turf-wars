@@ -2,6 +2,7 @@ import { Networking } from "@flamework/networking";
 import { CharacterType, HumanoidCharacterInstance } from "shared/types/characterTypes";
 import { ProjectileHitType, ProjectileRecord } from "shared/types/projectileTypes";
 import { ToolType } from "shared/types/toolTypes";
+import { GameMap, MVPStage } from "./types/workspaceTypes";
 
 export const TILT_UPDATE_SEND_RATE: number = 0.1;
 
@@ -26,6 +27,7 @@ interface ClientToServerEvents {
 
 interface ServerToClientEvents {
 	RoundStarting(team1: Team, team2: Team): void;
+	RoundEnding(winningTeam: Team, mvpStage: MVPStage): void;
 	SetGameClock(time: number, phaseName: string): void;
 
 	TurfChanged(team1Turf: number): void;

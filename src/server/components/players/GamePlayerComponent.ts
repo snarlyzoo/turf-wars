@@ -5,7 +5,7 @@ import { TurfService } from "server/services";
 import { Events } from "server/network";
 import { HammerConfig, SlingshotConfig, ToolInstance, ToolType } from "shared/types/toolTypes";
 import { ProjectileRecord } from "shared/types/projectileTypes";
-import { CharacterType, R15CharacterInstance, R6CharacterInstance } from "shared/types/characterTypes";
+import { R15CharacterInstance, R6CharacterInstance } from "shared/types/characterTypes";
 import { findFirstChildWithTag, getHammerConfig, getSlingshotConfig } from "shared/utility";
 import { PlayerComponent } from "./PlayerComponent";
 
@@ -19,8 +19,6 @@ export class GamePlayerComponent extends PlayerComponent implements OnTick {
 	private readonly TURF_KICK_COOLDOWN = 0.5;
 
 	private readonly isToolInstance = Flamework.createGuard<ToolInstance>();
-
-	protected override characterType = CharacterType.Game;
 
 	public combatEnabled: boolean = false;
 
