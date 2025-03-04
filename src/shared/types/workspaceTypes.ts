@@ -1,4 +1,6 @@
 export interface GameMap extends Model {
+	CameraPos: PVInstance;
+
 	Team1Spawn: TeamSpawn;
 	Team2Spawn: TeamSpawn;
 
@@ -9,12 +11,16 @@ export interface TeamSpawn extends Model {
 	SpawnBarriers: Folder;
 	SpawnLocations: Folder;
 	TeamColorParts: Folder;
-	MVPStage: MVPStage;
+	ChampionStage: ChampionStage;
 }
 
-export interface MVPStage extends Model {
+export interface ChampionStage extends Model {
 	CameraPos: PVInstance;
-	Player1Pos: PVInstance;
-	Player2Pos: PVInstance;
-	Player3Pos: PVInstance;
+	Positions: Folder & {
+		First: PVInstance;
+		Second: PVInstance;
+		Third: PVInstance;
+		Fourth: PVInstance;
+		Fifth: PVInstance;
+	};
 }

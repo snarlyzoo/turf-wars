@@ -32,7 +32,7 @@ export class Queue<T> {
 	public dequeue(): T | undefined {
 		if (this.isEmpty()) {
 			warn("Queue is empty");
-			return undefined;
+			return;
 		}
 
 		const value = this.buffer[this.head];
@@ -86,7 +86,7 @@ export class PriorityQueue<T extends defined> {
 	public dequeue(): T | undefined {
 		if (this.isEmpty()) {
 			warn("Priority queue is empty");
-			return undefined;
+			return;
 		}
 
 		const first = this.heap[0];

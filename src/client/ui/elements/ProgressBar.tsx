@@ -19,9 +19,9 @@ interface ProgressBarProps {
 	maxValue?: number;
 }
 
-export const ProgressBar = (props: ProgressBarProps): React.Element => {
-	const progressRef = useRef<Frame>(undefined);
-	const textRef = useRef<TextLabel>(undefined);
+const ProgressBar = (props: ProgressBarProps): React.Element => {
+	const progressRef = useRef<Frame>();
+	const textRef = useRef<TextLabel>();
 
 	const { textVisible = false, textAlignment = "Left", maxValue = 100 } = props;
 
@@ -77,3 +77,5 @@ export const ProgressBar = (props: ProgressBarProps): React.Element => {
 		</frame>
 	);
 };
+
+export default ProgressBar;

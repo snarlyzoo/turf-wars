@@ -170,7 +170,7 @@ export class ProjectileActionService {
 				return;
 			}
 			if (block.takeDamage(damage)) this.playerStatsManager.incrementStat(gamePlayer.instance, "blocksDestroyed");
-		} else {
+		} else if (hitType === ProjectileHitType.Character) {
 			const humanoid = hitParent.FindFirstChildOfClass("Humanoid");
 			if (!humanoid) {
 				warn(
@@ -201,6 +201,10 @@ export class ProjectileActionService {
 					this.playerStatsManager.incrementStat(player, "damageTaken", damage);
 				}
 			}
+		} else {
+			warn(`${gamePlayer.instance.Name} registered a projectile hit with an invalid hit type`);
+			return;
 		}
+		this.playerStatsManager.incrementStat(gamePlayer.instance, "projectilesHit");
 	}
 }

@@ -1,7 +1,7 @@
 import { Component, Components } from "@flamework/components";
 import { OnRender } from "@flamework/core";
 import { Workspace } from "@rbxts/services";
-import { CharacterController, TurfTracker } from "client/controllers";
+import { CharacterController, RoundTracker } from "client/controllers";
 import { Events, Functions } from "client/network";
 import { BlockComponent } from "shared/components";
 import { BlockGrid } from "shared/modules";
@@ -12,8 +12,6 @@ import { ToolComponent } from "./ToolComponent";
 @Component()
 export class HammerComponent extends ToolComponent implements OnRender {
 	private readonly BLOCK_OVERLAP_SIZE: Vector3 = new Vector3(1, 1, 1).mul(BlockGrid.BLOCK_SIZE * 0.9);
-
-	private readonly Map: Model = Workspace.FindFirstChild("Map") as Model;
 
 	public override toolType = ToolType.Hammer;
 	public override resourceType = ResourceType.Block;
@@ -32,7 +30,7 @@ export class HammerComponent extends ToolComponent implements OnRender {
 	public constructor(
 		protected characterController: CharacterController,
 		protected components: Components,
-		private turfTracker: TurfTracker,
+		private roundTracker: RoundTracker,
 	) {
 		super(characterController, components);
 	}
@@ -51,8 +49,12 @@ export class HammerComponent extends ToolComponent implements OnRender {
 
 		const camCFrame = this.characterController.camera.CFrame;
 
+		const filter: Array<Instance> = [BlockGrid.Folder];
+		const gameMap = this.roundTracker.getGameMap();
+		if (gameMap) filter.push(gameMap);
+
 		const raycastParams = new RaycastParams();
-		raycastParams.FilterDescendantsInstances = [BlockGrid.Folder, this.Map];
+		raycastParams.FilterDescendantsInstances = filter;
 		raycastParams.FilterType = Enum.RaycastFilterType.Include;
 
 		const raycastResult = Workspace.Raycast(
@@ -118,7 +120,7 @@ export class HammerComponent extends ToolComponent implements OnRender {
 	private placeBlock(): void {
 		if (!this.equipped || this.isActive || this.characterController.blockCount <= 0) return;
 
-		if (!this.placePos || !this.turfTracker.isPositionOnTurf(this.placePos, this.characterController.team)) return;
+		if (!this.placePos || !this.roundTracker.isPositionOnTurf(this.placePos, this.characterController.team)) return;
 
 		if (Workspace.GetPartBoundsInBox(new CFrame(this.placePos), this.BLOCK_OVERLAP_SIZE).size() > 0) return;
 

@@ -2,7 +2,6 @@ import { Networking } from "@flamework/networking";
 import { CharacterType, HumanoidCharacterInstance } from "shared/types/characterTypes";
 import { ProjectileHitType, ProjectileRecord } from "shared/types/projectileTypes";
 import { ToolType } from "shared/types/toolTypes";
-import { GameMap, MVPStage } from "./types/workspaceTypes";
 
 export const TILT_UPDATE_SEND_RATE: number = 0.1;
 
@@ -26,10 +25,13 @@ interface ClientToServerEvents {
 }
 
 interface ServerToClientEvents {
-	RoundStarting(team1: Team, team2: Team): void;
-	RoundEnding(winningTeam: Team, mvpStage: MVPStage): void;
-	SetGameClock(time: number, phaseName: string): void;
+	WaitingForPlayers(): void;
+	IntermissionStarting(): void;
 
+	RoundStarting(team1: Team, team2: Team, gameMap: Instance): void;
+	RoundEnding(winningTeam: Team, championData: Array<[string, string, string]>, championStage: Instance): void;
+
+	SetGameClock(time: number, stateName: string): void;
 	TurfChanged(team1Turf: number): void;
 
 	SetCombatEnabled(enabled: boolean): void;
@@ -39,6 +41,7 @@ interface ServerToClientEvents {
 	SetProjectileCount(amount: number): void;
 
 	CharacterTiltChanged: Networking.Unreliable<(character: HumanoidCharacterInstance, angle?: number) => void>;
+
 	ProjectileFired: Networking.Unreliable<
 		(caster: Player, projectileRecord: ProjectileRecord, pvInstance: PVInstance) => void
 	>;

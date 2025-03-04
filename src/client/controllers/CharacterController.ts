@@ -8,7 +8,7 @@ import { Events } from "client/network";
 import { CHARACTER_EVENT_RATE_LIMIT, TOOL_EVENT_RATE_LIMIT } from "shared/network";
 import { CharacterType } from "shared/types/characterTypes";
 import { TargetIndicator } from "shared/types/toolTypes";
-import { MVPStage } from "shared/types/workspaceTypes";
+import { ChampionStage } from "shared/types/workspaceTypes";
 
 enum BaseAction {
 	Sneak = "Sneak",
@@ -199,6 +199,10 @@ export class CharacterController implements OnStart {
 
 		this.camera.CameraType = Enum.CameraType.Custom;
 		this.camera.CameraSubject = character.FindFirstChild("Humanoid") as Humanoid;
+
+		this.combatEnabled = false;
+		this.blockCount = 0;
+		this.projectileCount = 0;
 
 		print(`Constructing ${this.characterType} character component...`);
 

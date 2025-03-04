@@ -47,6 +47,7 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 		this.tools[0].AnimationsLoaded.Connect(() => this.equipTool(0));
 
 		this.janitor.Add(this.ToolEquipped);
+		this.janitor.Add(() => (UserInputService.MouseBehavior = Enum.MouseBehavior.Default));
 	}
 
 	public override onTick(dt: number): void {
