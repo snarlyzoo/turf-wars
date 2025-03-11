@@ -1,13 +1,13 @@
 import React, { useEffect } from "@rbxts/react";
 import { Players, TweenService, Workspace } from "@rbxts/services";
-import { ChampionStage, GameMap } from "shared/types/workspaceTypes";
+import { ChampionStage } from "shared/types/workspaceTypes";
 
 const FIELD_OF_VIEW = 70;
 const MAP_HOLD_TIME = 2;
 
 const player = Players.LocalPlayer;
 
-function initializeCamera(): Camera | undefined {
+function fetchCamera(): Camera | undefined {
 	const camera = Workspace.CurrentCamera;
 	if (!camera) {
 		warn("No camera found");
@@ -29,7 +29,7 @@ interface PostRoundScreenProps {
 
 const PostRoundScreen = (props: PostRoundScreenProps): React.Element => {
 	useEffect(() => {
-		const camera = initializeCamera();
+		const camera = fetchCamera();
 		if (!camera) return;
 		camera.CFrame = props.startCFrame;
 

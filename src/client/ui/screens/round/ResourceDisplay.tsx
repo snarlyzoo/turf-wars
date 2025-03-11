@@ -23,8 +23,17 @@ const ResourceDisplay = (): React.Element => {
 			Position={UDim2.fromScale(1, 1)}
 			Size={UDim2.fromScale(0, 1)}
 		>
-			<ResourceCount count={projectileCount} />
-			<ResourceCount count={blockCount} />
+			<ResourceCount
+				count={projectileCount}
+				resourcePrefab={characterController.projectilePrefab}
+				teamColor={characterController.team.TeamColor}
+			/>
+			<ResourceCount
+				count={blockCount}
+				resourcePrefab={characterController.blockPrefab}
+				teamColor={characterController.team.TeamColor}
+				viewportOffset={new Vector3(-3, 3, -3)}
+			/>
 			<uiaspectratioconstraint
 				AspectRatio={2.5}
 				AspectType={Enum.AspectType.ScaleWithParentSize}

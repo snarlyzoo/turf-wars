@@ -5,7 +5,7 @@ import { RoundTracker } from "client/controllers";
 import { GameState } from "shared/types";
 import { ChampionStage, GameMap } from "shared/types/workspaceTypes";
 import RoundHUD from "./screens/round";
-import LobbyHUD from "./screens/LobbyHUD";
+import LobbyHUD from "./screens/lobby";
 import PostRoundScreen from "./screens/PostRoundScreen";
 
 StarterGui.SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false);
