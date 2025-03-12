@@ -77,10 +77,10 @@ export class RoundManager implements OnStart {
 			this.MIN_PLAYER_COUNT = 1;
 			this.INTERMISSION_TIME = 2;
 			this.ROUND_START_COUNTDOWN = 2;
-			this.CHAMPION_DISPLAY_TIME = 5;
+			this.CHAMPION_DISPLAY_TIME = 2;
 			this.PHASE_SEQUENCE = [
-				{ Type: PhaseType.Build, Duration: 5, initialBlockCount: 32 },
-				{ Type: PhaseType.Combat, Duration: 60, initialProjectileCount: 16 },
+				{ Type: PhaseType.Build, Duration: 2, initialBlockCount: 32 },
+				//{ Type: PhaseType.Combat, Duration: 60, initialProjectileCount: 16 },
 			];
 		}
 	}
@@ -281,7 +281,7 @@ export class RoundManager implements OnStart {
 
 			print(`${player.Name} wins the ${award} award: ${message}`);
 
-			championData.push([player.Name, award, message]);
+			for (let i = 0; i < 5; i++) championData.push([player.Name, award, message]);
 		});
 
 		return [championData, championStage];
