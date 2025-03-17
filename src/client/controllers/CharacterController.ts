@@ -8,7 +8,6 @@ import { Events } from "client/network";
 import { CHARACTER_EVENT_RATE_LIMIT, TOOL_EVENT_RATE_LIMIT } from "shared/network";
 import { CharacterType } from "shared/types/characterTypes";
 import { TargetIndicator } from "shared/types/toolTypes";
-import { ChampionStage } from "shared/types/workspaceTypes";
 
 enum BaseAction {
 	Sneak = "Sneak",
@@ -41,6 +40,8 @@ export class CharacterController implements OnStart {
 	private set team(value: Team) {
 		this._team = value;
 	}
+	private _team!: Team;
+
 	public get camera(): Camera {
 		return this._camera;
 	}
@@ -53,17 +54,8 @@ export class CharacterController implements OnStart {
 	private set backpack(value: Backpack) {
 		this._backpack = value;
 	}
-	private _team!: Team;
 	private _camera!: Camera;
 	private _backpack!: Backpack;
-
-	public get combatEnabled(): boolean {
-		return this._combatEnabled;
-	}
-	private set combatEnabled(value: boolean) {
-		this._combatEnabled = value;
-	}
-	private _combatEnabled: boolean = false;
 
 	public readonly CharacterAdded: Signal<(characterComponent: CharacterComponent) => void> = new Signal();
 	public readonly CharacterRemoved: Signal<() => void> = new Signal();
@@ -146,8 +138,7 @@ export class CharacterController implements OnStart {
 		this.player.CharacterAdded.Connect((character) => this.onCharacterAdded(character));
 		this.player.CharacterRemoving.Connect((character) => this.onCharacterRemoving(character));
 
-		Events.SetCombatEnabled.connect((enabled) => (this.combatEnabled = enabled));
-		Events.SetCharacterType.connect((characterType) => (this.characterType = characterType));
+		Events.SetCharacterType.connect((characterType) => this.onSetCharacterType(characterType));
 
 		Events.SetBlockCount.connect((amount) => (this.blockCount = amount));
 		Events.SetProjectileCount.connect((amount) => (this.projectileCount = amount));
@@ -158,10 +149,6 @@ export class CharacterController implements OnStart {
 	}
 
 	private fetchPlayerObjects(): void {
-		const team = this.player.Team;
-		if (!team) error("Player does not have a team");
-		this.team = team;
-
 		const camera = Workspace.CurrentCamera;
 		if (!camera) error("Missing camera in workspace");
 		this.camera = camera;
@@ -200,7 +187,6 @@ export class CharacterController implements OnStart {
 		this.camera.CameraType = Enum.CameraType.Custom;
 		this.camera.CameraSubject = character.FindFirstChild("Humanoid") as Humanoid;
 
-		this.combatEnabled = false;
 		this.blockCount = 0;
 		this.projectileCount = 0;
 
@@ -242,6 +228,14 @@ export class CharacterController implements OnStart {
 		this.characterComponent = undefined;
 
 		this.CharacterRemoved.Fire();
+	}
+
+	private onSetCharacterType(characterType: CharacterType): void {
+		this.characterType = characterType;
+
+		const team = this.player.Team;
+		if (!team) error("Player does not have a team");
+		this.team = team;
 	}
 
 	private onSneak(inputState: Enum.UserInputState): void {

@@ -1,13 +1,14 @@
 import { Component, Components } from "@flamework/components";
 import { OnRender } from "@flamework/core";
 import { Workspace } from "@rbxts/services";
-import { CharacterController, RoundTracker } from "client/controllers";
+import { CharacterController } from "client/controllers";
 import { Events, Functions } from "client/network";
 import { BlockComponent } from "shared/components";
 import { BlockGrid } from "shared/modules";
 import { HammerConfig, ResourceType, TargetIndicator, ToolType } from "shared/types/toolTypes";
 import { getHammerConfig } from "shared/utility";
 import { ToolComponent } from "./ToolComponent";
+import { roundStateAtom } from "shared/state/RoundState";
 
 @Component()
 export class HammerComponent extends ToolComponent implements OnRender {
@@ -27,11 +28,9 @@ export class HammerComponent extends ToolComponent implements OnRender {
 
 	private config!: HammerConfig;
 
-	public constructor(
-		protected characterController: CharacterController,
-		protected components: Components,
-		private roundTracker: RoundTracker,
-	) {
+	private raycastParams: RaycastParams = new RaycastParams();
+
+	public constructor(protected characterController: CharacterController, protected components: Components) {
 		super(characterController, components);
 	}
 
@@ -42,6 +41,16 @@ export class HammerComponent extends ToolComponent implements OnRender {
 
 		this.targetIndicator = this.characterController.targetIndicator.Clone();
 		this.targetIndicator.Parent = this.characterController.camera;
+
+		const filter: Array<Instance> = [BlockGrid.Folder];
+		const gameMap = roundStateAtom()?.gameMap;
+		if (gameMap) {
+			filter.push(gameMap);
+		} else {
+			warn("No game map found");
+		}
+		this.raycastParams.FilterDescendantsInstances = filter;
+		this.raycastParams.FilterType = Enum.RaycastFilterType.Include;
 	}
 
 	public onRender(): void {
@@ -49,18 +58,10 @@ export class HammerComponent extends ToolComponent implements OnRender {
 
 		const camCFrame = this.characterController.camera.CFrame;
 
-		const filter: Array<Instance> = [BlockGrid.Folder];
-		const gameMap = this.roundTracker.getGameMap();
-		if (gameMap) filter.push(gameMap);
-
-		const raycastParams = new RaycastParams();
-		raycastParams.FilterDescendantsInstances = filter;
-		raycastParams.FilterType = Enum.RaycastFilterType.Include;
-
 		const raycastResult = Workspace.Raycast(
 			camCFrame.Position,
 			camCFrame.LookVector.mul(this.config.range),
-			raycastParams,
+			this.raycastParams,
 		);
 		if (!raycastResult) {
 			this.placePos = undefined;
@@ -120,7 +121,7 @@ export class HammerComponent extends ToolComponent implements OnRender {
 	private placeBlock(): void {
 		if (!this.equipped || this.isActive || this.characterController.blockCount <= 0) return;
 
-		if (!this.placePos || !this.roundTracker.isPositionOnTurf(this.placePos, this.characterController.team)) return;
+		if (!this.placePos || !BlockGrid.isPositionOnTurf(this.placePos, this.characterController.team)) return;
 
 		if (Workspace.GetPartBoundsInBox(new CFrame(this.placePos), this.BLOCK_OVERLAP_SIZE).size() > 0) return;
 

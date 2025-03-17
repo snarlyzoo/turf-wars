@@ -1,9 +1,11 @@
 import { Networking } from "@flamework/networking";
+import CharmSync from "@rbxts/charm-sync";
 import { Players, Workspace } from "@rbxts/services";
 import {
 	CHARACTER_EVENT_RATE_LIMIT,
 	TILT_UPDATE_SEND_RATE,
 	TOOL_EVENT_RATE_LIMIT,
+	AtomsToSync,
 	GlobalEvents,
 	GlobalFunctions,
 } from "shared/network";
@@ -107,3 +109,9 @@ export const Functions = GlobalFunctions.createServer({
 		PlaceBlock: [limitFunctionRate(TOOL_EVENT_RATE_LIMIT)],
 	},
 });
+
+const syncer = CharmSync.server({
+	atoms: AtomsToSync,
+});
+syncer.connect((player, payload) => Events.SyncState(player, payload));
+Events.RequestState.connect((player) => syncer.hydrate(player));

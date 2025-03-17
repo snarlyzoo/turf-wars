@@ -71,10 +71,7 @@ export class BlockActionService {
 
 		const [character, config] = hammerContext;
 
-		if (
-			position !== BlockGrid.snapPosition(position) ||
-			!this.turfService.isPositionOnTurf(position, gamePlayer.team)
-		) {
+		if (position !== BlockGrid.snapPosition(position) || !BlockGrid.isPositionOnTurf(position, gamePlayer.team)) {
 			warn(`${gamePlayer.instance.Name} tried to place a block at an invalid position`);
 			return false;
 		}

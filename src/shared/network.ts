@@ -1,4 +1,7 @@
 import { Networking } from "@flamework/networking";
+import { SyncPayload } from "@rbxts/charm-sync";
+import { gameStateAtom } from "shared/state/GameState";
+import { roundStateAtom } from "shared/state/RoundState";
 import { CharacterType, HumanoidCharacterInstance } from "shared/types/characterTypes";
 import { ProjectileHitType, ProjectileRecord } from "shared/types/projectileTypes";
 import { ToolType } from "shared/types/toolTypes";
@@ -9,6 +12,8 @@ export const CHARACTER_EVENT_RATE_LIMIT: number = 0.1;
 export const TOOL_EVENT_RATE_LIMIT: number = 0.05;
 
 interface ClientToServerEvents {
+	RequestState(): void;
+
 	UpdateCharacterTilt: Networking.Unreliable<(angle: number) => void>;
 
 	EquipTool(toolType: ToolType): void;
@@ -25,20 +30,13 @@ interface ClientToServerEvents {
 }
 
 interface ServerToClientEvents {
-	WaitingForPlayers(): void;
-	IntermissionStarting(): void;
+	SyncState(payload: SyncPayload<typeof AtomsToSync>): void;
 
-	RoundStarting(team1: Team, team2: Team, gameMap: Instance): void;
-	RoundEnding(winningTeam: Team, championData: Array<[string, string, string]>, championStage: Instance): void;
+	RoundEnded(winningTeam: Team, championData: Array<[string, string, string]>): void;
 
-	SetGameClock(time: number, stateName: string): void;
-	TurfChanged(team1Turf: number): void;
-
-	SetCombatEnabled(enabled: boolean): void;
 	SetCharacterType(characterType: CharacterType): void;
-
-	SetBlockCount(amount: number): void;
-	SetProjectileCount(amount: number): void;
+	SetBlockCount(count: number): void;
+	SetProjectileCount(count: number): void;
 
 	CharacterTiltChanged: Networking.Unreliable<(character: HumanoidCharacterInstance, angle?: number) => void>;
 
@@ -52,6 +50,8 @@ interface ClientToServerFunctions {
 }
 
 interface ServerToClientFunctions {}
+
+export const AtomsToSync = { gameStateAtom, roundStateAtom };
 
 export const GlobalEvents = Networking.createEvent<ClientToServerEvents, ServerToClientEvents>();
 export const GlobalFunctions = Networking.createFunction<ClientToServerFunctions, ServerToClientFunctions>();
