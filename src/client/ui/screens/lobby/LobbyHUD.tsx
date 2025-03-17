@@ -3,7 +3,7 @@ import GameClock from "client/ui/elements/GameClock";
 
 const LobbyHUD = (): React.Element => {
 	return (
-		<screengui IgnoreGuiInset={true}>
+		<screengui IgnoreGuiInset={true} ResetOnSpawn={false}>
 			<GameClock />
 		</screengui>
 	);

@@ -1,4 +1,5 @@
 import { RunService, Workspace } from "@rbxts/services";
+import { getRoundState } from "shared/state/RoundState";
 
 export abstract class BlockGrid {
 	public static readonly BLOCK_SIZE = 3;
@@ -45,12 +46,11 @@ export abstract class BlockGrid {
 		return new Vector3(this.snapAxis(position.X), this.snapAxis(position.Y), this.snapAxis(position.Z));
 	}
 
-	public static isPositionInBounds(position: Vector3): boolean {
-		const { X, Y, Z } = position;
-		const { X: minX, Y: minY, Z: minZ } = this.MIN_BOUNDS;
-		const { X: maxX, Y: maxY, Z: maxZ } = this.MAX_BOUNDS;
-
-		return X >= minX && X <= maxX && Y >= minY && Y <= maxY && Z >= minZ && Z <= maxZ;
+	public static isPositionOnTurf(position: Vector3, team: Team): boolean {
+		return this.isPositionValid(position, team);
+	}
+	public static isOnCorrectSide(position: Vector3, team: Team): boolean {
+		return this.isPositionValid(position, team, false);
 	}
 
 	public static clear(): void {
@@ -59,5 +59,35 @@ export abstract class BlockGrid {
 
 	private static snapAxis(value: number): number {
 		return math.floor(value / this.BLOCK_SIZE) * this.BLOCK_SIZE + this.BLOCK_SIZE / 2;
+	}
+
+	private static isPositionValid(position: Vector3, team: Team, checkGridBounds = true): boolean {
+		const roundState = getRoundState();
+		if (!roundState) return false;
+
+		if (checkGridBounds && !this.isPositionInBounds(position)) return false;
+
+		if (team === roundState.team1) {
+			return position.X < this.getTurfDivider();
+		} else if (team === roundState.team2) {
+			return position.X >= this.getTurfDivider();
+		} else {
+			warn(`${team.Name} is not a valid team`);
+			return false;
+		}
+	}
+
+	private static isPositionInBounds(position: Vector3): boolean {
+		const { X, Y, Z } = position;
+		const { X: minX, Y: minY, Z: minZ } = this.MIN_BOUNDS;
+		const { X: maxX, Y: maxY, Z: maxZ } = this.MAX_BOUNDS;
+		return X >= minX && X <= maxX && Y >= minY && Y <= maxY && Z >= minZ && Z <= maxZ;
+	}
+
+	private static getTurfDivider(): number {
+		const roundState = getRoundState();
+		if (!roundState) return 0;
+
+		return BlockGrid.MIN_BOUNDS.X + (roundState.team1Turf + 0.5) * BlockGrid.BLOCK_SIZE;
 	}
 }

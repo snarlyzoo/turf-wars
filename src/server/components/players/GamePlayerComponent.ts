@@ -8,6 +8,7 @@ import { ProjectileRecord } from "shared/types/projectileTypes";
 import { R15CharacterInstance, R6CharacterInstance } from "shared/types/characterTypes";
 import { findFirstChildWithTag, getHammerConfig, getSlingshotConfig } from "shared/utility";
 import { PlayerComponent } from "./PlayerComponent";
+import { BlockGrid } from "shared/modules";
 
 type ToolConfigMap = {
 	[ToolType.Slingshot]: SlingshotConfig;
@@ -19,8 +20,6 @@ export class GamePlayerComponent extends PlayerComponent implements OnTick {
 	private readonly TURF_KICK_COOLDOWN = 0.5;
 
 	private readonly isToolInstance = Flamework.createGuard<ToolInstance>();
-
-	public combatEnabled: boolean = false;
 
 	public get blockCount(): number {
 		return this._blockCount;
@@ -175,7 +174,7 @@ export class GamePlayerComponent extends PlayerComponent implements OnTick {
 		const tick = os.clock();
 		if (tick - this.lastTurfKickTick < this.TURF_KICK_COOLDOWN) return;
 
-		if (!this.turfService.isOnCorrectSide(this.character.GetPivot().Position, this.team)) {
+		if (!BlockGrid.isOnCorrectSide(this.character.GetPivot().Position, this.team)) {
 			this.turfService.kickCharacterBackToTurf(this.character, this.team);
 			this.lastTurfKickTick = tick;
 		}
@@ -203,7 +202,6 @@ export class GamePlayerComponent extends PlayerComponent implements OnTick {
 
 	protected override onDied(): void {
 		super.onDied();
-		this.combatEnabled = false;
 
 		this.unequip();
 

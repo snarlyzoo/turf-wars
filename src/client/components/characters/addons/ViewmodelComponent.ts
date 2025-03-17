@@ -2,6 +2,7 @@ import { Component } from "@flamework/components";
 import { OnRender, OnStart } from "@flamework/core";
 import { config, createMotion, Motion, SpringOptions } from "@rbxts/ripple";
 import { Players, RunService, StarterPlayer, Workspace } from "@rbxts/services";
+import { CharacterController } from "client/controllers";
 import { DisposableComponent } from "shared/components";
 import { HumanoidCharacterInstance, R6CharacterInstance, ViewmodelInstance } from "shared/types/characterTypes";
 
@@ -37,8 +38,6 @@ export class ViewmodelComponent
 	private readonly MAX_SWAY_ANGLE: number = math.rad(5);
 	private readonly CAMERA_SWAY_FACTOR: number = 0.25;
 
-	private camera!: Camera;
-
 	private viewmodel!: ViewmodelInstance;
 
 	private prevCamCFrame: CFrame = new CFrame();
@@ -47,9 +46,11 @@ export class ViewmodelComponent
 	private moveMotion: Motion<CFrame> = createMotion(new CFrame(), { start: true });
 	private swayMotion: Motion<CFrame> = createMotion(new CFrame(), { start: true });
 
-	public onStart(): void {
-		this.fetchCamera();
+	public constructor(private controller: CharacterController) {
+		super();
+	}
 
+	public onStart(): void {
 		this.createViewmodel();
 
 		this.instance.Humanoid.StateChanged.Connect((_, newState) => this.onHumanoidStateChanged(newState));
@@ -61,7 +62,7 @@ export class ViewmodelComponent
 		this.updateMoveMotion();
 		this.updateSwayMotion();
 
-		const camCFrame = this.camera.CFrame;
+		const camCFrame = this.controller.camera.CFrame;
 		this.viewmodel.PivotTo(
 			camCFrame
 				.mul(this.jumpMotion.get().mul(this.moveMotion.get()).mul(this.swayMotion.get()))
@@ -80,14 +81,6 @@ export class ViewmodelComponent
 			while (!this.viewmodel) task.wait();
 			resolve(this.viewmodel);
 		});
-	}
-
-	private fetchCamera(): void {
-		const camera = Workspace.CurrentCamera;
-		if (!camera) {
-			error("Missing camera in Workspace");
-		}
-		this.camera = camera;
 	}
 
 	private createViewmodel(): void {
@@ -121,7 +114,7 @@ export class ViewmodelComponent
 		viewmodel["Right Arm"].Size = this.ARM_SIZE;
 
 		this.viewmodel = viewmodel as ViewmodelInstance;
-		this.viewmodel.Parent = this.camera;
+		this.viewmodel.Parent = this.controller.camera;
 
 		const animator = new Instance("Animator");
 		animator.Parent = this.viewmodel.Humanoid;
@@ -144,7 +137,7 @@ export class ViewmodelComponent
 	}
 
 	private updateSwayMotion(): void {
-		const camCFrame = this.camera.CFrame;
+		const camCFrame = this.controller.camera.CFrame;
 		const delta = this.prevCamCFrame.Inverse().mul(camCFrame);
 		const [deltaX, deltaY] = delta.ToEulerAnglesXYZ();
 

@@ -7,6 +7,7 @@ import { TurfService } from "server/services";
 import { PlayerRegistry, PlayerStatsManager } from "server/services/players";
 import { BlockComponent } from "shared/components";
 import { Physics } from "shared/modules";
+import { getRoundState, PhaseType } from "shared/state/RoundState";
 import { ProjectileHitType, ProjectileRecord } from "shared/types/projectileTypes";
 import { ToolType } from "shared/types/toolTypes";
 
@@ -30,10 +31,7 @@ export class ProjectileActionService {
 		speed: number,
 		timestamp: number,
 	): void {
-		if (!gamePlayer.combatEnabled) {
-			warn(`${gamePlayer.instance.Name} does not have combat enabled`);
-			return;
-		}
+		if (!this.isCombatPhase()) return;
 
 		if (!gamePlayer.isAlive) {
 			warn(`${gamePlayer.instance.Name} is not alive`);
@@ -116,10 +114,7 @@ export class ProjectileActionService {
 		hitTimestamp: number,
 		firedTimestamp: number,
 	): void {
-		if (!gamePlayer.combatEnabled) {
-			warn(`${gamePlayer.instance.Name} does not have combat enabled`);
-			return;
-		}
+		if (!this.isCombatPhase()) return;
 
 		const projectileRecord = gamePlayer.projectileRecords.get(firedTimestamp);
 		if (!projectileRecord) {
@@ -206,5 +201,15 @@ export class ProjectileActionService {
 			return;
 		}
 		this.playerStatsManager.incrementStat(gamePlayer.instance, "projectilesHit");
+	}
+
+	private isCombatPhase(): boolean {
+		const roundState = getRoundState();
+		if (!roundState) return false;
+		if (roundState.phase !== PhaseType.Combat) {
+			warn("Round state is not in the combat phase");
+			return false;
+		}
+		return true;
 	}
 }

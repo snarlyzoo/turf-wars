@@ -1,33 +1,25 @@
-import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
-import React, { useEffect, useState } from "@rbxts/react";
-import { Players } from "@rbxts/services";
-import { RoundTracker } from "client/controllers";
+import React from "@rbxts/react";
 import GameClock from "client/ui/elements/GameClock";
 import ProgressBar from "client/ui/elements/ProgressBar";
 import { BlockGrid } from "shared/modules";
+import { roundStateAtom } from "shared/state/RoundState";
 import ToolDisplay from "./ToolDisplay";
 import ResourceDisplay from "./ResourceDisplay";
+import { useAtom } from "@rbxts/react-charm";
+import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
+import { CharacterController } from "client/controllers";
 
-const player = Players.LocalPlayer;
+const RoundHUD = (): React.Element => {
+	const roundState = useAtom(roundStateAtom);
+	if (!roundState) return <></>;
 
-interface RoundHUDProps {
-	team1: Team;
-	team2: Team;
-}
+	const characterController = useFlameworkDependency<CharacterController>();
 
-const RoundHUD = (props: RoundHUDProps): React.Element => {
-	const [myTeam, enemyTeam] = player.Team === props.team1 ? [props.team1, props.team2] : [props.team2, props.team1];
-
-	const roundTracker = useFlameworkDependency<RoundTracker>();
-	const [teamTurf, setTeamTurf] = useState(roundTracker.getTeamTurf(myTeam));
-
-	useEffect(() => {
-		const connection = roundTracker.TurfChanged.Connect(() => setTeamTurf(roundTracker.getTeamTurf(myTeam)));
-		return () => connection.Disconnect();
-	}, []);
+	const isTeam1 = characterController.team === roundState.team1;
+	const [myTeam, enemyTeam] = isTeam1 ? [roundState.team1, roundState.team2] : [roundState.team2, roundState.team1];
 
 	return (
-		<screengui IgnoreGuiInset={true}>
+		<screengui IgnoreGuiInset={true} ResetOnSpawn={false}>
 			<GameClock>
 				<ProgressBar
 					anchorPoint={new Vector2(0.5, 0)}
@@ -39,7 +31,7 @@ const RoundHUD = (props: RoundHUDProps): React.Element => {
 					textColor={new Color3(1, 1, 1)}
 					textVisible={true}
 					textAlignment="Progress"
-					value={teamTurf}
+					value={isTeam1 ? roundState.team1Turf : BlockGrid.DIMENSIONS.X - roundState.team1Turf}
 					maxValue={BlockGrid.DIMENSIONS.X}
 				/>
 			</GameClock>

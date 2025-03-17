@@ -1,62 +1,40 @@
-import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
 import React, { useEffect, useState } from "@rbxts/react";
+import { useAtom } from "@rbxts/react-charm";
 import { StarterGui } from "@rbxts/services";
-import { RoundTracker } from "client/controllers";
-import { GameState } from "shared/types";
-import { ChampionStage } from "shared/types/workspaceTypes";
-import RoundHUD from "./screens/round";
+import { Events } from "client/network";
+import { GameStateType, gameStateAtom } from "shared/state/GameState";
 import LobbyHUD from "./screens/lobby";
+import RoundHUD from "./screens/round";
 import PostRoundScreen from "./screens/PostRoundScreen";
 
 StarterGui.SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false);
 
 const App = (): React.Element => {
-	const roundTracker = useFlameworkDependency<RoundTracker>();
+	const gameStateType = useAtom(gameStateAtom).type;
 
-	const [gameState, setGameState] = useState(roundTracker.gameState);
-
-	const [teams, setTeams] = useState<[Team, Team] | undefined>();
-	const [postRoundInfo, setPostRoundInfo] = useState<
-		[Team, Array<[string, string, string]>, ChampionStage] | undefined
-	>();
+	const [postRoundInfo, setPostRoundInfo] = useState<[Team, Array<[string, string, string]>] | undefined>();
 
 	useEffect(() => {
-		const connections: Array<RBXScriptConnection> = [
-			roundTracker.GameStateChanged.Connect((gameState) => {
-				setGameState(gameState);
-
-				if (gameState === GameState.Round) {
-					setTeams(roundTracker.getTeams());
-				} else if (gameState === GameState.PostRound) {
-					setPostRoundInfo(roundTracker.getPostRoundInfo());
-				}
-			}),
-		];
-		return () => connections.forEach((connection) => connection.Disconnect());
+		Events.RoundEnded.connect((winningTeam, championData) => {
+			setPostRoundInfo([winningTeam, championData]);
+		});
 	}, []);
 
-	switch (gameState) {
-		case GameState.WaitingForPlayers:
-		case GameState.Intermission:
+	useEffect(() => {
+		if (postRoundInfo && gameStateType !== GameStateType.PostRound) {
+			setPostRoundInfo(undefined);
+		}
+	}, [gameStateType]);
+
+	switch (gameStateType) {
+		case GameStateType.WaitingForPlayers:
+		case GameStateType.Intermission:
 			return <LobbyHUD />;
-		case GameState.Round:
-			if (!teams) {
-				warn("Teams not set");
-				return <></>;
-			}
-			return <RoundHUD team1={teams[0]} team2={teams[1]} />;
-		case GameState.PostRound:
-			if (!postRoundInfo) {
-				warn("Post round info not set");
-				return <></>;
-			}
-			return (
-				<PostRoundScreen
-					winningTeam={postRoundInfo[0]}
-					championData={postRoundInfo[1]}
-					championStage={postRoundInfo[2]}
-				/>
-			);
+		case GameStateType.Round:
+			return <RoundHUD />;
+		case GameStateType.PostRound:
+			if (!postRoundInfo) return <></>;
+			return <PostRoundScreen winningTeam={postRoundInfo![0]} championData={postRoundInfo![1]} />;
 	}
 };
 

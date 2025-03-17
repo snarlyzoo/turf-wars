@@ -53,15 +53,6 @@ export class PlayerRegistry implements OnStart {
 		if (loadCharacter) player.LoadCharacter();
 	}
 
-	public setCombatEnabled(enabled: boolean): void {
-		this.playerComponents.forEach((playerComponent) => {
-			if (playerComponent instanceof GamePlayerComponent) {
-				playerComponent.combatEnabled = enabled;
-				Events.SetCombatEnabled.fire(playerComponent.instance, enabled);
-			}
-		});
-	}
-
 	public giveBlocksToAll(amount: number): void {
 		this.playerComponents.forEach((playerComponent) => {
 			if (playerComponent instanceof GamePlayerComponent) playerComponent.giveBlocks(amount);

@@ -1,6 +1,6 @@
 import { Service } from "@flamework/core";
-import { Events } from "server/network";
 import { BlockGrid } from "shared/modules";
+import { getRoundState, setTeam1Turf } from "shared/state/RoundState";
 import { HumanoidCharacterInstance } from "shared/types/characterTypes";
 import { GameMap, TeamSpawn } from "shared/types/workspaceTypes";
 
@@ -8,41 +8,33 @@ import { GameMap, TeamSpawn } from "shared/types/workspaceTypes";
 export class TurfService {
 	private readonly OUT_OF_BOUNDS_KICK = new Vector3(75, 25, 0);
 
-	private team1?: Team;
-	private team2?: Team;
-
 	private turfLines?: BasePart[];
 	private blocksOnTurfLine: Map<number, BasePart[]> = new Map();
 
-	private team1Turf: number = 0;
-	private turfPerKill: number = 1;
-
 	private outOfBoundsPlayers: Set<number> = new Set();
 
-	public initialize(team1: Team, team2: Team, gameMap: GameMap): void {
-		this.team1 = team1;
-		this.team2 = team2;
+	public reset(): void {
+		const roundState = getRoundState();
+		if (!roundState) return;
 
+		const gameMap = roundState.gameMap as GameMap;
 		this.turfLines = gameMap.TurfLines.GetChildren()
 			.filter((child) => child.IsA("BasePart"))
 			.sort((a, b) => a.Name < b.Name);
 		this.blocksOnTurfLine.clear();
 
-		this.team1Turf = BlockGrid.DIMENSIONS.X / 2;
-		this.turfPerKill = 1;
+		setTeam1Turf(BlockGrid.DIMENSIONS.X / 2);
 
 		this.outOfBoundsPlayers.clear();
 
 		BlockGrid.clear();
 
+		const [team1Color, team2Color] = [roundState.team1.TeamColor, roundState.team2.TeamColor];
 		this.turfLines.forEach(
-			(turfLine, index) => (turfLine.BrickColor = index < this.team1Turf ? team1.TeamColor : team2.TeamColor),
+			(turfLine, index) => (turfLine.BrickColor = index < BlockGrid.DIMENSIONS.X / 2 ? team1Color : team2Color),
 		);
-
-		this.setupTeamSpawn(gameMap.Team1Spawn, team1.TeamColor);
-		this.setupTeamSpawn(gameMap.Team2Spawn, team2.TeamColor);
-
-		Events.TurfChanged.broadcast(this.team1Turf);
+		this.setupTeamSpawn(gameMap.Team1Spawn, team1Color);
+		this.setupTeamSpawn(gameMap.Team2Spawn, team2Color);
 	}
 
 	public registerBlock(block: BasePart): void {
@@ -66,21 +58,14 @@ export class TurfService {
 		this.claimTurf(team);
 	}
 
-	public isPositionOnTurf(position: Vector3, team: Team): boolean {
-		return this.isPositionValid(position, team);
-	}
-
-	public isOnCorrectSide(position: Vector3, team: Team): boolean {
-		return this.isPositionValid(position, team, false);
-	}
-
 	public kickCharacterBackToTurf(character: HumanoidCharacterInstance, team: Team): void {
-		if (!this.validateTeams()) return;
+		const roundState = getRoundState();
+		if (!roundState) return;
 
 		let kickDirection: Vector3;
-		if (team === this.team1) {
+		if (team === roundState.team1) {
 			kickDirection = new Vector3(-1, 0, 0);
-		} else if (team === this.team2) {
+		} else if (team === roundState.team2) {
 			kickDirection = new Vector3(1, 0, 0);
 		} else {
 			warn(`${team.Name} is not a valid team`);
@@ -91,43 +76,10 @@ export class TurfService {
 		character.HumanoidRootPart.AssemblyLinearVelocity = this.OUT_OF_BOUNDS_KICK.mul(kickDirection);
 	}
 
-	public setTurfPerKill(turfPerKill: number): void {
-		this.turfPerKill = turfPerKill;
-	}
-
-	public getWinningTeam(): Team | undefined {
-		if (!this.validateTeams()) return;
-		return this.team1Turf >= BlockGrid.DIMENSIONS.X / 2 ? this.team1 : this.team2;
-	}
-
-	private validateTeams(): boolean {
-		if (!this.team1 || !this.team2) {
-			warn("Teams have not been set");
-			return false;
-		}
-		return true;
-	}
-
-	private getTurfDivider(): number {
-		return BlockGrid.MIN_BOUNDS.X + (this.team1Turf + 0.5) * BlockGrid.BLOCK_SIZE;
-	}
-
-	private isPositionValid(position: Vector3, team: Team, checkGridBounds: boolean = true): boolean {
-		if (!this.validateTeams()) return false;
-		if (checkGridBounds && !BlockGrid.isPositionInBounds(position)) return false;
-
-		if (team === this.team1) {
-			return position.X < this.getTurfDivider();
-		} else if (team === this.team2) {
-			return position.X >= this.getTurfDivider();
-		} else {
-			warn(`${team.Name} is not a valid team`);
-			return false;
-		}
-	}
-
 	private claimTurf(team: Team): void {
-		if (!this.validateTeams()) return;
+		const roundState = getRoundState();
+		if (!roundState) return;
+
 		if (!this.turfLines) {
 			warn("Turf lines have not been set");
 			return;
@@ -135,16 +87,16 @@ export class TurfService {
 
 		let start: number, finish: number, step: number;
 		let teamColor: BrickColor;
-		if (team === this.team1) {
-			start = this.team1Turf;
-			finish = math.min(this.team1Turf + this.turfPerKill, BlockGrid.DIMENSIONS.X);
+		if (team === roundState.team1) {
+			start = roundState.team1Turf;
+			finish = math.min(roundState.team1Turf + roundState.turfPerKill, BlockGrid.DIMENSIONS.X);
 			step = 1;
-			teamColor = this.team1.TeamColor;
-		} else if (team === this.team2) {
-			start = this.team1Turf - 1;
-			finish = math.max(this.team1Turf - this.turfPerKill, 0);
+			teamColor = roundState.team1.TeamColor;
+		} else if (team === roundState.team2) {
+			start = roundState.team1Turf - 1;
+			finish = math.max(roundState.team1Turf - roundState.turfPerKill, 0);
 			step = -1;
-			teamColor = this.team2.TeamColor;
+			teamColor = roundState.team2.TeamColor;
 		} else {
 			warn(`${team.Name} is not a valid team`);
 			return;
@@ -165,8 +117,7 @@ export class TurfService {
 			// TODO: End the round
 		}
 
-		this.team1Turf = finish;
-		Events.TurfChanged.broadcast(this.team1Turf);
+		setTeam1Turf(finish);
 	}
 
 	private setupTeamSpawn(teamSpawn: TeamSpawn, teamColor: BrickColor): void {

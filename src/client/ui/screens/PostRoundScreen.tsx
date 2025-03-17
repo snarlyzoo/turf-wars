@@ -1,10 +1,11 @@
 import React, { useEffect } from "@rbxts/react";
-import { Players, TweenService, Workspace } from "@rbxts/services";
+import { useAtom } from "@rbxts/react-charm";
+import { Players, Workspace } from "@rbxts/services";
 import ChampionTitle from "client/ui/elements/ChampionTitle";
-import { ChampionStage } from "shared/types/workspaceTypes";
+import { roundStateAtom } from "shared/state/RoundState";
+import { GameMap } from "shared/types/workspaceTypes";
 
 const FIELD_OF_VIEW = 70;
-const MAP_HOLD_TIME = 2;
 
 const player = Players.LocalPlayer;
 
@@ -24,31 +25,37 @@ function fetchCamera(): Camera | undefined {
 interface PostRoundScreenProps {
 	winningTeam: Team;
 	championData: Array<[string, string, string]>;
-	championStage: ChampionStage;
 }
 
 const PostRoundScreen = (props: PostRoundScreenProps): React.Element => {
+	const roundState = useAtom(roundStateAtom);
+	if (!roundState) return <></>;
+
+	const championStage = (roundState.gameMap as GameMap)[
+		props.winningTeam === roundState.team1 ? "Team1Spawn" : "Team2Spawn"
+	].ChampionStage;
+
 	useEffect(() => {
 		const camera = fetchCamera();
 		if (!camera) return;
-		camera.CFrame = props.championStage.CameraPos.GetPivot();
+		camera.CFrame = championStage.CameraPos.GetPivot();
 
 		const humanoid = player.Character?.FindFirstChildOfClass("Humanoid");
 		if (humanoid) humanoid.AutoRotate = false;
 	}, []);
 
 	const positions = [
-		props.championStage.Positions.First,
-		props.championStage.Positions.Second,
-		props.championStage.Positions.Third,
-		props.championStage.Positions.Fourth,
-		props.championStage.Positions.Fifth,
+		championStage.Positions.First,
+		championStage.Positions.Second,
+		championStage.Positions.Third,
+		championStage.Positions.Fourth,
+		championStage.Positions.Fifth,
 	];
 	const alignments: Array<"Top" | "Bottom"> = ["Bottom", "Top", "Top", "Bottom", "Bottom"];
 
 	return (
 		<>
-			<screengui IgnoreGuiInset={true}>
+			<screengui IgnoreGuiInset={true} ResetOnSpawn={false}>
 				<textlabel
 					AnchorPoint={new Vector2(0.5, 1)}
 					BackgroundColor3={new Color3(0, 0, 0)}

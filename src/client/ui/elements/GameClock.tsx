@@ -1,6 +1,7 @@
-import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
-import React, { useEffect, useState } from "@rbxts/react";
-import { RoundTracker } from "client/controllers";
+import React from "@rbxts/react";
+import { useAtom } from "@rbxts/react-charm";
+import { gameStateAtom } from "shared/state/GameState";
+import { roundStateAtom } from "shared/state/RoundState";
 
 const formatTime = (time: number): string => {
 	const minutes = math.floor(time / 60);
@@ -13,23 +14,8 @@ interface GameClockProps {
 }
 
 const GameClock = (props: GameClockProps): React.Element => {
-	const roundTracker = useFlameworkDependency<RoundTracker>();
-	const [time, setTime] = useState(roundTracker.time);
-	const [stateName, setStateName] = useState(roundTracker.stateName);
-
-	useEffect(() => {
-		const connection = roundTracker.GameClockChanged.Connect(() => {
-			setTime(roundTracker.time);
-			setStateName(roundTracker.stateName);
-		});
-		return () => connection.Disconnect();
-	}, []);
-
-	useEffect(() => {
-		if (time <= 0) return;
-		const interval = task.delay(1, () => setTime(time - 1));
-		return () => task.cancel(interval);
-	}, [time]);
+	const gameState = useAtom(gameStateAtom);
+	const roundState = useAtom(roundStateAtom);
 
 	return (
 		<frame
@@ -47,7 +33,7 @@ const GameClock = (props: GameClockProps): React.Element => {
 				Size={UDim2.fromScale(1, 0.75)}
 				Font={Enum.Font.Arcade}
 				RichText={true}
-				Text={`<b>${formatTime(time)}</b>`}
+				Text={`<b>${formatTime(roundState ? roundState.time : gameState.time)}</b>`}
 				TextColor3={new Color3(1, 1, 1)}
 				TextScaled={true}
 			/>
@@ -57,13 +43,13 @@ const GameClock = (props: GameClockProps): React.Element => {
 				Position={UDim2.fromScale(0.5, 0.9)}
 				Size={UDim2.fromScale(1, 0.25)}
 				Font={Enum.Font.Arcade}
-				Text={stateName}
+				Text={roundState ? roundState.phase : gameState.type}
 				TextColor3={new Color3(1, 1, 1)}
 				TextScaled={true}
 			/>
 			{props.children}
 			<uiaspectratioconstraint
-				AspectRatio={2.75}
+				AspectRatio={3}
 				AspectType={Enum.AspectType.ScaleWithParentSize}
 				DominantAxis={Enum.DominantAxis.Width}
 			/>

@@ -3,6 +3,7 @@ import { Players, Workspace } from "@rbxts/services";
 import { Events } from "client/network";
 import { BlockComponent } from "shared/components";
 import { ProjectileCaster } from "shared/modules";
+import { roundStateAtom } from "shared/state/RoundState";
 import { Projectile, ProjectileHitType, ProjectileModifier } from "shared/types/projectileTypes";
 import { ResourceType, SlingshotConfig, ToolType } from "shared/types/toolTypes";
 import { getSlingshotConfig } from "shared/utility";
@@ -46,16 +47,16 @@ export class SlingshotComponent extends ToolComponent {
 	private fireProjectile(toFire: boolean): void {
 		this.toFire = toFire;
 		if (!this.equipped || this.isActive || !this.toFire) return;
-		if (!this.characterController.combatEnabled || this.characterController.projectileCount <= 0) return;
+		if (!roundStateAtom()?.combatEnabled || this.characterController.projectileCount <= 0) return;
 
 		this.isActive = true;
 
 		let speed = this.config.projectile.startSpeed;
 		const tick = os.clock();
-		while (this.equipped && this.toFire && this.characterController.combatEnabled) task.wait();
+		while (this.equipped && this.toFire) task.wait();
 		speed = math.min(speed + this.config.drawSpeed * (os.clock() - tick), this.config.projectile.maxSpeed);
 
-		if (this.equipped && this.characterController.combatEnabled) {
+		if (this.equipped && roundStateAtom()?.combatEnabled) {
 			const camCFrame = this.characterController.camera.CFrame;
 
 			const timestamp = Workspace.GetServerTimeNow();
