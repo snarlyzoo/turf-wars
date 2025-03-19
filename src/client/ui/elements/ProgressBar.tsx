@@ -10,8 +10,6 @@ interface ProgressBarProps {
 	progressColor?: Color3;
 	progressTransparency?: number;
 
-	font?: Enum.Font;
-	textColor?: Color3;
 	textVisible?: boolean;
 	textAlignment?: "Left" | "Progress";
 
@@ -69,9 +67,9 @@ const ProgressBar = (props: ProgressBarProps): React.Element => {
 					ref={textRef}
 					AnchorPoint={new Vector2(0, 0.5)}
 					BackgroundTransparency={1}
-					Font={props.font}
+					Font={Enum.Font.Arcade}
 					Text={`${math.floor(props.value)}`}
-					TextColor3={props.textColor}
+					TextColor3={new Color3(1, 1, 1)}
 				/>
 			)}
 		</frame>

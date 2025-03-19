@@ -72,12 +72,12 @@ export class RoundManager implements OnStart {
 
 		if (RunService.IsStudio()) {
 			this.MIN_PLAYER_COUNT = 1;
-			this.INTERMISSION_TIME = 2;
+			this.INTERMISSION_TIME = 10;
 			this.ROUND_START_COUNTDOWN = 2;
 			this.CHAMPION_DISPLAY_TIME = 2;
 			this.PHASE_SEQUENCE = [
 				{ Type: PhaseType.Build, Duration: 2, blockCount: 32 },
-				//{ Type: PhaseType.Combat, Duration: 15, projectileCount: 16 },
+				{ Type: PhaseType.Combat, Duration: 60, projectileCount: 16 },
 			];
 		}
 	}
@@ -146,7 +146,7 @@ export class RoundManager implements OnStart {
 		setCombatEnabled(phase.Type === PhaseType.Combat, phase.turfPerKill);
 
 		if (phase.blockCount !== undefined) this.playerRegistry.giveBlocksToAll(phase.blockCount);
-		if (phase.blockCount !== undefined) this.playerRegistry.giveProjectilesToAll(phase.blockCount);
+		if (phase.projectileCount !== undefined) this.playerRegistry.giveProjectilesToAll(phase.projectileCount);
 
 		setPhase(phase.Type, phase.Duration);
 		this.phaseIndex = index;

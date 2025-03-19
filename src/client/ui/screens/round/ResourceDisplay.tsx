@@ -1,7 +1,7 @@
 import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
 import React, { useEffect, useState } from "@rbxts/react";
 import { CharacterController } from "client/controllers";
-import ResourceCount from "client/ui/elements/ResourceCount";
+import { ResourceCount } from "client/ui/elements/round";
 
 const ResourceDisplay = (): React.Element => {
 	const characterController = useFlameworkDependency<CharacterController>();

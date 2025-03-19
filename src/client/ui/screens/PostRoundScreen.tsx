@@ -1,7 +1,8 @@
 import React, { useEffect } from "@rbxts/react";
 import { useAtom } from "@rbxts/react-charm";
 import { Players, Workspace } from "@rbxts/services";
-import ChampionTitle from "client/ui/elements/ChampionTitle";
+import { TextLabel } from "client/ui/elements/base";
+import { ChampionTitle } from "client/ui/elements/post-round";
 import { roundStateAtom } from "shared/state/RoundState";
 import { GameMap } from "shared/types/workspaceTypes";
 
@@ -9,20 +10,8 @@ const FIELD_OF_VIEW = 70;
 
 const player = Players.LocalPlayer;
 
-function fetchCamera(): Camera | undefined {
-	const camera = Workspace.CurrentCamera;
-	if (!camera) {
-		warn("No camera found");
-		return;
-	}
-
-	camera.CameraType = Enum.CameraType.Scriptable;
-	camera.FieldOfView = FIELD_OF_VIEW;
-
-	return camera;
-}
-
 interface PostRoundScreenProps {
+	camera: Camera;
 	winningTeam: Team;
 	championData: Array<[string, string, string]>;
 }
@@ -36,9 +25,9 @@ const PostRoundScreen = (props: PostRoundScreenProps): React.Element => {
 	].ChampionStage;
 
 	useEffect(() => {
-		const camera = fetchCamera();
-		if (!camera) return;
-		camera.CFrame = championStage.CameraPos.GetPivot();
+		props.camera.CameraType = Enum.CameraType.Scriptable;
+		props.camera.FieldOfView = FIELD_OF_VIEW;
+		props.camera.CFrame = championStage.CameraPos.GetPivot();
 
 		const humanoid = player.Character?.FindFirstChildOfClass("Humanoid");
 		if (humanoid) humanoid.AutoRotate = false;
@@ -56,20 +45,14 @@ const PostRoundScreen = (props: PostRoundScreenProps): React.Element => {
 	return (
 		<>
 			<screengui IgnoreGuiInset={true} ResetOnSpawn={false}>
-				<textlabel
-					AnchorPoint={new Vector2(0.5, 1)}
-					BackgroundColor3={new Color3(0, 0, 0)}
-					BackgroundTransparency={0.5}
-					BorderSizePixel={0}
-					Position={UDim2.fromScale(0.5, 1)}
-					Size={UDim2.fromScale(1, 0.2)}
-					Font={Enum.Font.Arcade}
-					RichText={true}
-					Text={`<b><font color="#${props.winningTeam.TeamColor.Color.ToHex()}">${
+				<TextLabel
+					anchorPoint={new Vector2(0.5, 1)}
+					position={UDim2.fromScale(0.5, 1)}
+					size={UDim2.fromScale(1, 0.2)}
+					richText={true}
+					text={`<b><font color="#${props.winningTeam.TeamColor.Color.ToHex()}">${
 						props.winningTeam.Name
 					}</font> Wins!</b>`}
-					TextColor3={new Color3(1, 1, 1)}
-					TextScaled={true}
 				/>
 			</screengui>
 			{props.championData.map((data, index) => (
