@@ -77,7 +77,7 @@ export class RoundManager implements OnStart {
 			this.CHAMPION_DISPLAY_TIME = 2;
 			this.PHASE_SEQUENCE = [
 				{ Type: PhaseType.Build, Duration: 2, blockCount: 32 },
-				//{ Type: PhaseType.Combat, Duration: 15, projectileCount: 16 },
+				{ Type: PhaseType.Combat, Duration: 15, projectileCount: 16 },
 			];
 		}
 	}
@@ -117,12 +117,14 @@ export class RoundManager implements OnStart {
 
 		this.turfService.reset();
 
+		/**
 		Players.GetPlayers().forEach((player) => {
 			this.players.add(player);
 			this.playerStatsManager.initializePlayer(player);
 		});
 		this.shuffleTeams(team1, team2);
 		this.setPlayerComponents(CharacterType.Game);
+		*/
 
 		setPhase(PhaseType.RoundStart, this.ROUND_START_COUNTDOWN);
 		await Promise.delay(this.ROUND_START_COUNTDOWN);
@@ -146,7 +148,7 @@ export class RoundManager implements OnStart {
 		setCombatEnabled(phase.Type === PhaseType.Combat, phase.turfPerKill);
 
 		if (phase.blockCount !== undefined) this.playerRegistry.giveBlocksToAll(phase.blockCount);
-		if (phase.blockCount !== undefined) this.playerRegistry.giveProjectilesToAll(phase.blockCount);
+		if (phase.projectileCount !== undefined) this.playerRegistry.giveProjectilesToAll(phase.projectileCount);
 
 		setPhase(phase.Type, phase.Duration);
 		this.phaseIndex = index;

@@ -39,8 +39,10 @@ export class CharacterController implements OnStart {
 	}
 	private set team(value: Team) {
 		this._team = value;
+		this.TeamChanged.Fire(value);
 	}
 	private _team!: Team;
+	public readonly TeamChanged: Signal<(team: Team) => void> = new Signal();
 
 	public get camera(): Camera {
 		return this._camera;

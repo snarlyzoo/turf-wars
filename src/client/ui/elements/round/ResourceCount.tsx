@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "@rbxts/react";
+import { Frame, TextLabel } from "client/ui/elements/base";
 
 interface ResourceCountProps {
 	count: number;
@@ -31,12 +32,7 @@ const ResourceCount = (props: ResourceCountProps): React.Element => {
 	}, []);
 
 	return (
-		<frame
-			BackgroundColor3={new Color3(0, 0, 0)}
-			BackgroundTransparency={0.5}
-			BorderSizePixel={0}
-			Size={UDim2.fromScale(1, 1)}
-		>
+		<Frame size={UDim2.fromScale(1, 1)}>
 			<viewportframe
 				ref={viewportRef}
 				AnchorPoint={new Vector2(0, 0.5)}
@@ -44,19 +40,16 @@ const ResourceCount = (props: ResourceCountProps): React.Element => {
 				Position={UDim2.fromScale(0, 0.5)}
 				Size={UDim2.fromScale(0.4, 0.8)}
 			/>
-			<textlabel
-				AnchorPoint={new Vector2(1, 0.5)}
-				BackgroundTransparency={1}
-				Position={UDim2.fromScale(0.9, 0.5)}
-				Size={UDim2.fromScale(0.5, 0.8)}
-				Font={Enum.Font.Arcade}
-				RichText={true}
-				Text={`x<b>${props.count}</b>`}
-				TextColor3={new Color3(1, 1, 1)}
-				TextScaled={true}
-				TextXAlignment={Enum.TextXAlignment.Left}
+			<TextLabel
+				anchorPoint={new Vector2(1, 0.5)}
+				backgroundTransparency={1}
+				position={UDim2.fromScale(0.9, 0.5)}
+				size={UDim2.fromScale(0.5, 0.8)}
+				richText={true}
+				text={`x<b>${props.count}</b>`}
+				textXAlignment={Enum.TextXAlignment.Left}
 			/>
-		</frame>
+		</Frame>
 	);
 };
 

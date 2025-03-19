@@ -1,7 +1,8 @@
 import React, { useEffect } from "@rbxts/react";
 import { useAtom } from "@rbxts/react-charm";
 import { Players, Workspace } from "@rbxts/services";
-import ChampionTitle from "client/ui/elements/ChampionTitle";
+import { TextLabel } from "client/ui/elements/base";
+import { ChampionTitle } from "client/ui/elements/post-round";
 import { roundStateAtom } from "shared/state/RoundState";
 import { GameMap } from "shared/types/workspaceTypes";
 
@@ -56,20 +57,14 @@ const PostRoundScreen = (props: PostRoundScreenProps): React.Element => {
 	return (
 		<>
 			<screengui IgnoreGuiInset={true} ResetOnSpawn={false}>
-				<textlabel
-					AnchorPoint={new Vector2(0.5, 1)}
-					BackgroundColor3={new Color3(0, 0, 0)}
-					BackgroundTransparency={0.5}
-					BorderSizePixel={0}
-					Position={UDim2.fromScale(0.5, 1)}
-					Size={UDim2.fromScale(1, 0.2)}
-					Font={Enum.Font.Arcade}
-					RichText={true}
-					Text={`<b><font color="#${props.winningTeam.TeamColor.Color.ToHex()}">${
+				<TextLabel
+					anchorPoint={new Vector2(0.5, 1)}
+					position={UDim2.fromScale(0.5, 1)}
+					size={UDim2.fromScale(1, 0.2)}
+					richText={true}
+					text={`<b><font color="#${props.winningTeam.TeamColor.Color.ToHex()}">${
 						props.winningTeam.Name
 					}</font> Wins!</b>`}
-					TextColor3={new Color3(1, 1, 1)}
-					TextScaled={true}
 				/>
 			</screengui>
 			{props.championData.map((data, index) => (

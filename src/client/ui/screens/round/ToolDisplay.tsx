@@ -2,7 +2,7 @@ import { useFlameworkDependency } from "@rbxts/flamework-react-utils";
 import React, { useEffect, useState } from "@rbxts/react";
 import { GameCharacterComponent } from "client/components/characters";
 import { CharacterController } from "client/controllers";
-import ToolIcon from "client/ui/elements/ToolIcon";
+import { ToolIcon } from "client/ui/elements/round";
 
 const ToolDisplay = (): React.Element => {
 	const [toolNames, setToolNames] = useState(new Array<string>());
