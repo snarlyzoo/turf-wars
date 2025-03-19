@@ -43,7 +43,13 @@ const App = (): React.Element => {
 			return team === Spectators ? <LobbyHUD /> : <RoundHUD />;
 		case GameStateType.PostRound:
 			if (!postRoundInfo) return <></>;
-			return <PostRoundScreen winningTeam={postRoundInfo![0]} championData={postRoundInfo![1]} />;
+			return (
+				<PostRoundScreen
+					camera={characterController.camera}
+					winningTeam={postRoundInfo![0]}
+					championData={postRoundInfo![1]}
+				/>
+			);
 	}
 };
 

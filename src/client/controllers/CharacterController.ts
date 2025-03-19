@@ -146,6 +146,17 @@ export class CharacterController implements OnStart {
 		Events.SetProjectileCount.connect((amount) => (this.projectileCount = amount));
 	}
 
+	public resetCamera(): void {
+		this.camera.CameraType = Enum.CameraType.Custom;
+
+		const humanoid = this.characterComponent?.instance.FindFirstChildOfClass("Humanoid");
+		if (!humanoid) {
+			warn("Character does not have a humanoid");
+			return;
+		}
+		this.camera.CameraSubject = humanoid;
+	}
+
 	public getCharacterComponent<T extends CharacterComponent>(componentClass: AbstractConstructor<T>): T | undefined {
 		return this.characterComponent instanceof componentClass ? this.characterComponent : undefined;
 	}
@@ -186,9 +197,6 @@ export class CharacterController implements OnStart {
 
 		character.WaitForChild("HumanoidRootPart");
 
-		this.camera.CameraType = Enum.CameraType.Custom;
-		this.camera.CameraSubject = character.FindFirstChild("Humanoid") as Humanoid;
-
 		this.blockCount = 0;
 		this.projectileCount = 0;
 
@@ -211,6 +219,8 @@ export class CharacterController implements OnStart {
 		this.bindInputActions(this.baseInputActions);
 
 		this.CharacterAdded.Fire(characterComponent);
+
+		this.resetCamera();
 
 		print(`${this.characterType} character component constructed`);
 	}

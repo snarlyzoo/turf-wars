@@ -10,20 +10,8 @@ const FIELD_OF_VIEW = 70;
 
 const player = Players.LocalPlayer;
 
-function fetchCamera(): Camera | undefined {
-	const camera = Workspace.CurrentCamera;
-	if (!camera) {
-		warn("No camera found");
-		return;
-	}
-
-	camera.CameraType = Enum.CameraType.Scriptable;
-	camera.FieldOfView = FIELD_OF_VIEW;
-
-	return camera;
-}
-
 interface PostRoundScreenProps {
+	camera: Camera;
 	winningTeam: Team;
 	championData: Array<[string, string, string]>;
 }
@@ -37,9 +25,9 @@ const PostRoundScreen = (props: PostRoundScreenProps): React.Element => {
 	].ChampionStage;
 
 	useEffect(() => {
-		const camera = fetchCamera();
-		if (!camera) return;
-		camera.CFrame = championStage.CameraPos.GetPivot();
+		props.camera.CameraType = Enum.CameraType.Scriptable;
+		props.camera.FieldOfView = FIELD_OF_VIEW;
+		props.camera.CFrame = championStage.CameraPos.GetPivot();
 
 		const humanoid = player.Character?.FindFirstChildOfClass("Humanoid");
 		if (humanoid) humanoid.AutoRotate = false;

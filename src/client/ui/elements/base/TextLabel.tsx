@@ -8,6 +8,7 @@ interface TextLabelProps {
 
 	richText?: boolean;
 	text: string;
+	textColor3?: Color3;
 	textXAlignment?: Enum.TextXAlignment;
 
 	children?: React.ReactNode;
@@ -25,7 +26,7 @@ const TextLabel = (props: TextLabelProps): React.Element => {
 			Font={Enum.Font.Arcade}
 			RichText={props.richText}
 			Text={props.text}
-			TextColor3={new Color3(1, 1, 1)}
+			TextColor3={props.textColor3 ?? new Color3(1, 1, 1)}
 			TextScaled={true}
 			TextXAlignment={props.textXAlignment}
 		>

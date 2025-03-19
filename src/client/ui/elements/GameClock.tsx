@@ -22,10 +22,10 @@ const GameClock = (): React.Element => {
 
 	let turfProgressBar: React.Element | undefined;
 	if (roundState) {
-		const isTeam1 = characterController.team === roundState.team1;
-		const [myTeam, enemyTeam] = isTeam1
-			? [roundState.team1, roundState.team2]
-			: [roundState.team2, roundState.team1];
+		const isTeam2 = characterController.team === roundState.team2;
+		const [myTeam, enemyTeam] = isTeam2
+			? [roundState.team2, roundState.team1]
+			: [roundState.team1, roundState.team2];
 
 		turfProgressBar = (
 			<ProgressBar
@@ -36,7 +36,7 @@ const GameClock = (): React.Element => {
 				progressColor={myTeam.TeamColor.Color}
 				textVisible={true}
 				textAlignment="Progress"
-				value={isTeam1 ? roundState.team1Turf : BlockGrid.DIMENSIONS.X - roundState.team1Turf}
+				value={isTeam2 ? BlockGrid.DIMENSIONS.X - roundState.team1Turf : roundState.team1Turf}
 				maxValue={BlockGrid.DIMENSIONS.X}
 			/>
 		);
