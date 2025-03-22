@@ -5,7 +5,7 @@ import { TurfService } from "server/services";
 import { Events } from "server/network";
 import { HammerConfig, SlingshotConfig, ToolInstance, ToolType } from "shared/types/toolTypes";
 import { ProjectileRecord } from "shared/types/projectileTypes";
-import { R15CharacterInstance, R6CharacterInstance } from "shared/types/characterTypes";
+import { CharacterType, R15CharacterInstance, R6CharacterInstance } from "shared/types/characterTypes";
 import { findFirstChildWithTag, getHammerConfig, getSlingshotConfig } from "shared/utility";
 import { PlayerComponent } from "./PlayerComponent";
 import { BlockGrid } from "shared/modules";
@@ -17,6 +17,8 @@ type ToolConfigMap = {
 
 @Component()
 export class GamePlayerComponent extends PlayerComponent implements OnTick {
+	public override characterType = CharacterType.Game;
+
 	private readonly TURF_KICK_COOLDOWN = 0.5;
 
 	private readonly isToolInstance = Flamework.createGuard<ToolInstance>();
@@ -125,13 +127,10 @@ export class GamePlayerComponent extends PlayerComponent implements OnTick {
 		this.curTool = undefined;
 	}
 
-	public giveBlocks(amount: number): void {
-		this.blockCount += amount;
-		Events.SetBlockCount.fire(this.instance, this.blockCount);
-	}
-	public giveProjectiles(amount: number): void {
-		this.projectileCount += amount;
-		Events.SetProjectileCount.fire(this.instance, this.projectileCount);
+	public giveResources(blockCount?: number, projectileCount?: number): void {
+		this.blockCount += blockCount ?? 0;
+		this.projectileCount += projectileCount ?? 0;
+		Events.UpdateResources.fire(this.instance, this.blockCount, this.projectileCount);
 	}
 
 	private createToolJoint(): void {

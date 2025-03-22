@@ -35,8 +35,7 @@ interface ServerToClientEvents {
 	RoundEnded(winningTeam: Team, championData: Array<[string, string, string]>): void;
 
 	SetCharacterType(characterType: CharacterType): void;
-	SetBlockCount(count: number): void;
-	SetProjectileCount(count: number): void;
+	UpdateResources(blockCount: number, projectileCount: number): void;
 
 	CharacterTiltChanged: Networking.Unreliable<(character: HumanoidCharacterInstance, angle?: number) => void>;
 

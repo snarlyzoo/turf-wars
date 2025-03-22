@@ -139,14 +139,14 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 	}
 
 	private constructViewmodel(): void {
-		print("Constructing viewmodel component...");
+		print("Constructing ViewmodelComponent...");
 
 		this.viewmodel = this.components.addComponent<ViewmodelComponent>(this.instance);
 		this.janitor.Add(() => {
 			this.components.removeComponent<ViewmodelComponent>(this.instance);
 		});
 
-		print("Viewmodel component constructed");
+		print("ViewmodelComponent constructed");
 	}
 
 	private constructTools(): void {
@@ -154,20 +154,20 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 		const slingshot = findFirstChildWithTag(this.controller.backpack, ToolType.Slingshot);
 		if (!hammer || !slingshot) error("Missing tool instances in backpack");
 
-		print("Constructing tool components...");
+		print("Constructing ToolComponents...");
 
 		this.tools.push(this.components.addComponent<SlingshotComponent>(slingshot));
 		this.tools.push(this.components.addComponent<HammerComponent>(hammer));
 
 		this.janitor.Add(() => {
 			this.unequip();
-			this.tools.clear();
 
-			this.components.removeComponent<HammerComponent>(hammer);
 			this.components.removeComponent<SlingshotComponent>(slingshot);
+			this.components.removeComponent<HammerComponent>(hammer);
+			this.tools.clear();
 		});
 
-		print("Tool components constructed");
+		print("ToolComponents constructed");
 	}
 
 	private async attachToolJointToViewmodel(): Promise<void> {

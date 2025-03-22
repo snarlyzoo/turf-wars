@@ -18,20 +18,18 @@ interface PostRoundScreenProps {
 
 const PostRoundScreen = (props: PostRoundScreenProps): React.Element => {
 	const roundState = useAtom(roundStateAtom);
-	if (!roundState) return <></>;
-
-	const championStage = (roundState.gameMap as GameMap)[
-		props.winningTeam === roundState.team1 ? "Team1Spawn" : "Team2Spawn"
-	].ChampionStage;
 
 	useEffect(() => {
 		props.camera.CameraType = Enum.CameraType.Scriptable;
 		props.camera.FieldOfView = FIELD_OF_VIEW;
 		props.camera.CFrame = championStage.CameraPos.GetPivot();
-
-		const humanoid = player.Character?.FindFirstChildOfClass("Humanoid");
-		if (humanoid) humanoid.AutoRotate = false;
 	}, []);
+
+	if (!roundState) return <></>;
+
+	const championStage = (roundState.gameMap as GameMap)[
+		props.winningTeam === roundState.team1 ? "Team1Spawn" : "Team2Spawn"
+	].ChampionStage;
 
 	const positions = [
 		championStage.Positions.First,

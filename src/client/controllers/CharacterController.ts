@@ -1,6 +1,6 @@
 import { Components } from "@flamework/components";
 import { Controller, OnStart } from "@flamework/core";
-import { AbstractConstructor } from "@flamework/core/out/utility";
+import { AbstractConstructor, Constructor } from "@flamework/core/out/utility";
 import { ContextActionService, Players, ReplicatedStorage, Workspace } from "@rbxts/services";
 import Signal from "@rbxts/signal";
 import { CharacterComponent, GameCharacterComponent, LobbyCharacterComponent } from "client/components/characters";
@@ -32,76 +32,14 @@ interface InputAction {
 
 @Controller()
 export class CharacterController implements OnStart {
-	public readonly player: Player = Players.LocalPlayer;
-
-	public get team(): Team {
-		return this._team;
-	}
-	private set team(value: Team) {
-		this._team = value;
-		this.TeamChanged.Fire(value);
-	}
-	private _team!: Team;
-	public readonly TeamChanged: Signal<(team: Team) => void> = new Signal();
-
-	public get camera(): Camera {
-		return this._camera;
-	}
-	private set camera(value: Camera) {
-		this._camera = value;
-	}
-	public get backpack(): Backpack {
-		return this._backpack;
-	}
-	private set backpack(value: Backpack) {
-		this._backpack = value;
-	}
-	private _camera!: Camera;
-	private _backpack!: Backpack;
-
-	public readonly CharacterAdded: Signal<(characterComponent: CharacterComponent) => void> = new Signal();
-	public readonly CharacterRemoved: Signal<() => void> = new Signal();
-
-	public get blockCount(): number {
-		return this._blockCount;
-	}
-	public set blockCount(value: number) {
-		this._blockCount = value;
-		this.BlockCountChanged.Fire(value);
-	}
-	private _blockCount: number = 0;
-	public readonly BlockCountChanged: Signal<(amount: number) => void> = new Signal();
-
-	// TODO: Find a better way to reference these objects
-	public blockPrefab = ReplicatedStorage.FindFirstChild("Block") as BasePart;
-	public targetIndicator = ReplicatedStorage.FindFirstChild("TargetIndicator") as TargetIndicator;
-
-	public get projectileCount(): number {
-		return this._projectileCount;
-	}
-	public set projectileCount(value: number) {
-		this._projectileCount = value;
-		this.ProjectileCountChanged.Fire(value);
-	}
-	private _projectileCount: number = 0;
-	public readonly ProjectileCountChanged: Signal<(amount: number) => void> = new Signal();
-
-	public projectilePrefab = ReplicatedStorage.FindFirstChild("Projectile") as PVInstance;
-
-	private characterType: CharacterType = CharacterType.Lobby;
-	private characterComponent?: CharacterComponent;
-
-	private lastCharacterEventTick: number = 0;
-	private lastToolEventTick: number = 0;
-
-	private baseInputActions: InputAction[] = [
+	private BASE_INPUT_ACTIONS: InputAction[] = [
 		{
 			actionName: BaseAction.Sneak,
 			input: [Enum.KeyCode.LeftShift, Enum.KeyCode.ButtonL3],
 			callback: (_, inputState): void => this.onSneak(inputState),
 		},
 	];
-	private gameInputActions: InputAction[] = [
+	private GAME_INPUT_ACTIONS: InputAction[] = [
 		{
 			actionName: GameAction.EquipPrimary,
 			input: [Enum.KeyCode.One],
@@ -134,16 +72,84 @@ export class CharacterController implements OnStart {
 		},
 	];
 
+	public readonly player: Player = Players.LocalPlayer;
+
+	public get team(): Team {
+		return this._team;
+	}
+	private set team(value: Team) {
+		this._team = value;
+		this.TeamChanged.Fire(value);
+	}
+	private _team!: Team;
+	public readonly TeamChanged: Signal<(team: Team) => void> = new Signal();
+
+	public get camera(): Camera {
+		return this._camera;
+	}
+	private set camera(value: Camera) {
+		this._camera = value;
+	}
+	public get backpack(): Backpack {
+		return this._backpack;
+	}
+	private set backpack(value: Backpack) {
+		this._backpack = value;
+	}
+	private _camera!: Camera;
+	private _backpack!: Backpack;
+
+	private characterType: CharacterType = CharacterType.Lobby;
+	private characterComponent?: CharacterComponent;
+
+	public readonly CharacterAdded: Signal<(characterComponent: CharacterComponent) => void> = new Signal();
+	public readonly CharacterRemoved: Signal<() => void> = new Signal();
+
+	private curInputActions: InputAction[] = [];
+
+	private lastCharacterEventTick: number = 0;
+	private lastToolEventTick: number = 0;
+
+	public get blockCount(): number {
+		return this._blockCount;
+	}
+	public set blockCount(value: number) {
+		this._blockCount = value;
+		this.BlockCountChanged.Fire(value);
+	}
+	private _blockCount: number = 0;
+	public readonly BlockCountChanged: Signal<(amount: number) => void> = new Signal();
+
+	// TODO: Find a better way to reference these objects
+	public blockPrefab = ReplicatedStorage.FindFirstChild("Block") as BasePart;
+	public targetIndicator = ReplicatedStorage.FindFirstChild("TargetIndicator") as TargetIndicator;
+
+	public get projectileCount(): number {
+		return this._projectileCount;
+	}
+	public set projectileCount(value: number) {
+		this._projectileCount = value;
+		this.ProjectileCountChanged.Fire(value);
+	}
+	private _projectileCount: number = 0;
+	public readonly ProjectileCountChanged: Signal<(amount: number) => void> = new Signal();
+
+	public projectilePrefab = ReplicatedStorage.FindFirstChild("Projectile") as PVInstance;
+
 	public constructor(private components: Components) {}
 
 	public onStart(): void {
+		this.player.GetPropertyChangedSignal("Team").Connect(() => this.onTeamChanged());
+
 		this.player.CharacterAdded.Connect((character) => this.onCharacterAdded(character));
 		this.player.CharacterRemoving.Connect((character) => this.onCharacterRemoving(character));
 
 		Events.SetCharacterType.connect((characterType) => this.onSetCharacterType(characterType));
 
-		Events.SetBlockCount.connect((amount) => (this.blockCount = amount));
-		Events.SetProjectileCount.connect((amount) => (this.projectileCount = amount));
+		Events.UpdateResources.connect((blockCount, projectileCount) => {
+			this.blockCount = blockCount;
+			this.projectileCount = projectileCount;
+		});
 	}
 
 	public resetCamera(): void {
@@ -175,17 +181,25 @@ export class CharacterController implements OnStart {
 		inputActions.forEach((inputAction) => {
 			ContextActionService.BindAction(inputAction.actionName, inputAction.callback, false, ...inputAction.input);
 		});
+		this.curInputActions = inputActions;
 	}
 	private unbindInputActions(inputActions: InputAction[]): void {
 		inputActions.forEach((inputAction) => {
 			ContextActionService.UnbindAction(inputAction.actionName);
 		});
+		this.curInputActions = [];
 	}
 
 	private canFireEvent(lastEventTick: number, rateLimit: number): [boolean, number] {
 		const tick = os.clock();
 		if (tick - lastEventTick < rateLimit) return [false, lastEventTick];
 		return [true, tick];
+	}
+
+	private onTeamChanged(): void {
+		const team = this.player.Team;
+		if (!team) error("Player does not have a team");
+		this.team = team;
 	}
 
 	private onCharacterAdded(character: Model): void {
@@ -197,32 +211,29 @@ export class CharacterController implements OnStart {
 
 		character.WaitForChild("HumanoidRootPart");
 
-		this.blockCount = 0;
-		this.projectileCount = 0;
-
-		print(`Constructing ${this.characterType} character component...`);
-
-		let characterComponent: CharacterComponent;
+		let componentClass: Constructor<CharacterComponent>;
+		let inputActions: InputAction[] = this.BASE_INPUT_ACTIONS;
 		switch (this.characterType) {
 			case CharacterType.Game:
-				characterComponent = this.components.addComponent<GameCharacterComponent>(character);
-				this.bindInputActions(this.gameInputActions);
+				componentClass = GameCharacterComponent;
+				inputActions = [...inputActions, ...this.GAME_INPUT_ACTIONS];
 				break;
 			case CharacterType.Lobby:
-				characterComponent = this.components.addComponent<LobbyCharacterComponent>(character);
+				componentClass = LobbyCharacterComponent;
 				break;
-			default:
-				error(`Invalid character type: ${this.characterType}`);
 		}
+
+		print(`Constructing ${componentClass}...`);
+
+		const characterComponent = this.components.addComponent(character, componentClass);
+		this.bindInputActions(inputActions);
+
 		this.characterComponent = characterComponent;
-
-		this.bindInputActions(this.baseInputActions);
-
 		this.CharacterAdded.Fire(characterComponent);
 
 		this.resetCamera();
 
-		print(`${this.characterType} character component constructed`);
+		print(`${componentClass} constructed`);
 	}
 
 	private onCharacterRemoving(character: Model): void {
@@ -230,24 +241,22 @@ export class CharacterController implements OnStart {
 
 		if (this.characterComponent instanceof GameCharacterComponent) {
 			this.components.removeComponent<GameCharacterComponent>(character);
-			this.unbindInputActions(this.gameInputActions);
-		} else {
+		} else if (this.characterComponent instanceof LobbyCharacterComponent) {
 			this.components.removeComponent<LobbyCharacterComponent>(character);
 		}
-
-		this.unbindInputActions(this.baseInputActions);
+		this.unbindInputActions(this.curInputActions);
 
 		this.characterComponent = undefined;
-
 		this.CharacterRemoved.Fire();
+
+		this.blockCount = 0;
+		this.projectileCount = 0;
 	}
 
 	private onSetCharacterType(characterType: CharacterType): void {
+		if (characterType === CharacterType.None && this.characterComponent)
+			this.onCharacterRemoving(this.characterComponent.instance);
 		this.characterType = characterType;
-
-		const team = this.player.Team;
-		if (!team) error("Player does not have a team");
-		this.team = team;
 	}
 
 	private onSneak(inputState: Enum.UserInputState): void {

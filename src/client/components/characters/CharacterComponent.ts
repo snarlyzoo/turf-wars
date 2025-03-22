@@ -71,14 +71,14 @@ export abstract class CharacterComponent
 	}
 
 	private constructTiltCharacter(): void {
-		print("Constructing tilt character component...");
+		print("Constructing TiltCharacterComponent...");
 
 		this.tiltCharacter = this.components.addComponent<TiltCharacterComponent>(this.instance);
 		this.janitor.Add(() => {
 			this.components.removeComponent<TiltCharacterComponent>(this.instance);
 		});
 
-		print("Tilt character component constructed");
+		print("TiltCharacterComponent constructed");
 	}
 
 	private updateTilt(): void {

@@ -13,13 +13,17 @@ interface SpectatorHUDProps {
 
 const SpectatorHUD = (props: SpectatorHUDProps): React.Element => {
 	const roundState = useAtom(roundStateAtom);
-	if (!roundState) return <></>;
 
-	const [players, setPlayers] = useState<Array<Player>>([
-		...roundState.team1.GetPlayers(),
-		...roundState.team2.GetPlayers(),
-	]);
+	const [players, setPlayers] = useState<Array<Player>>([]);
+
 	useEffect(() => {
+		if (!roundState) {
+			props.onReturn();
+			return;
+		}
+
+		setPlayers([...roundState.team1.GetPlayers(), ...roundState.team2.GetPlayers()]);
+
 		const onPlayerAdded = (player: Player): void => setPlayers((prev) => [...prev, player]);
 		const onPlayerRemoved = (player: Player): void => setPlayers((prev) => prev.filter((p) => p !== player));
 
@@ -30,7 +34,7 @@ const SpectatorHUD = (props: SpectatorHUDProps): React.Element => {
 			roundState.team2.PlayerRemoved.Connect(onPlayerRemoved),
 		];
 		return () => connections.forEach((connection) => connection.Disconnect());
-	}, []);
+	}, [roundState]);
 
 	const [selectedPlayerId, setSelectedPlayerId] = useState<number | undefined>(
 		players.size() > 0 ? players[0].UserId : undefined,

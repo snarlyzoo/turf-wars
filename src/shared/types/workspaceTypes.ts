@@ -1,6 +1,4 @@
 export interface GameMap extends Model {
-	CameraPos: PVInstance;
-
 	Team1Spawn: TeamSpawn;
 	Team2Spawn: TeamSpawn;
 

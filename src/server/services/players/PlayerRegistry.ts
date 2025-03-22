@@ -1,5 +1,6 @@
 import { Components } from "@flamework/components";
 import { OnStart, Service } from "@flamework/core";
+import { AbstractConstructor, Constructor } from "@flamework/core/out/utility";
 import { Players } from "@rbxts/services";
 import { PlayerComponent, GamePlayerComponent, LobbyPlayerComponent } from "server/components/players";
 import { Events } from "server/network";
@@ -20,47 +21,59 @@ export class PlayerRegistry implements OnStart {
 		Players.PlayerRemoving.Connect((player) => this.onPlayerRemoving(player));
 	}
 
-	public getPlayerComponent(player: Player): PlayerComponent | undefined {
-		return this.playerComponents.get(player.UserId);
+	public getPlayerComponent<T extends PlayerComponent>(
+		player: Player,
+		componentClass: AbstractConstructor<T>,
+	): T | undefined {
+		const playerComponent = this.playerComponents.get(player.UserId);
+		return playerComponent instanceof componentClass ? playerComponent : undefined;
 	}
 
-	public setPlayerComponent(player: Player, characterType: CharacterType, loadCharacter: boolean = true): void {
-		let playerComponent = this.getPlayerComponent(player);
-		if (playerComponent) {
-			this.destroyPlayerComponent(playerComponent);
-		}
+	public setPlayerComponent<T extends PlayerComponent>(
+		player: Player,
+		componentClass: Constructor<T>,
+		loadCharacter: boolean = true,
+	): T {
+		this.destroyPlayerComponent(player);
 
-		if (characterType !== CharacterType.None) {
-			print(`Constructing ${characterType} player component for ${player.Name}...`);
+		print(`Constructing ${componentClass} for ${player.Name}...`);
 
-			switch (characterType) {
-				case CharacterType.Game:
-					playerComponent = this.components.addComponent<GamePlayerComponent>(player);
-					break;
-				case CharacterType.Lobby:
-					playerComponent = this.components.addComponent<LobbyPlayerComponent>(player);
-					break;
-				default:
-					error(`Invalid character type ${characterType}`);
-			}
-			this.playerComponents.set(player.UserId, playerComponent);
+		const playerComponent = this.components.addComponent(player, componentClass);
+		this.playerComponents.set(player.UserId, playerComponent);
 
-			print(`${characterType} player component constructed for ${player.Name}`);
-		}
-
-		Events.SetCharacterType.fire(player, characterType);
+		Events.SetCharacterType.fire(player, playerComponent.characterType);
 
 		if (loadCharacter) player.LoadCharacter();
+
+		print(`${componentClass} constructed for ${player.Name}`);
+
+		return playerComponent;
 	}
 
-	public giveBlocksToAll(amount: number): void {
-		this.playerComponents.forEach((playerComponent) => {
-			if (playerComponent instanceof GamePlayerComponent) playerComponent.giveBlocks(amount);
-		});
+	public destroyPlayerComponent(player: Player): void {
+		const playerComponent = this.getPlayerComponent(player, PlayerComponent);
+		if (!playerComponent) return;
+
+		if (playerComponent instanceof GamePlayerComponent) {
+			this.components.removeComponent<GamePlayerComponent>(player);
+		} else if (playerComponent instanceof LobbyPlayerComponent) {
+			this.components.removeComponent<LobbyPlayerComponent>(player);
+		}
+		this.playerComponents.delete(player.UserId);
 	}
-	public giveProjectilesToAll(amount: number): void {
-		this.playerComponents.forEach((playerComponent) => {
-			if (playerComponent instanceof GamePlayerComponent) playerComponent.giveProjectiles(amount);
+
+	public deactivateAllPlayers(): void {
+		Players.GetPlayers().forEach((player) => {
+			this.destroyPlayerComponent(player);
+			Events.SetCharacterType.fire(player, CharacterType.None);
+
+			if (!player.Character) return;
+
+			player.Character.GetChildren()
+				.filter((child) => child.IsA("BasePart"))
+				.forEach((child) => (child.Anchored = true));
+
+			player.Character.PivotTo(new CFrame(0, -1000, 0));
 		});
 	}
 
@@ -77,25 +90,12 @@ export class PlayerRegistry implements OnStart {
 		this.kickOffenses.set(player.UserId, offenses + 1);
 	}
 
-	private destroyPlayerComponent(playerComponent: PlayerComponent): void {
-		const player = playerComponent.instance;
-		if (playerComponent instanceof GamePlayerComponent) {
-			this.components.removeComponent<GamePlayerComponent>(player);
-		} else {
-			this.components.removeComponent<LobbyPlayerComponent>(player);
-		}
-		this.playerComponents.delete(player.UserId);
-	}
-
 	private onPlayerAdded(player: Player): void {
-		this.setPlayerComponent(player, CharacterType.Lobby, false);
+		this.setPlayerComponent(player, LobbyPlayerComponent, false);
 		this.kickOffenses.set(player.UserId, 0);
 	}
 	private onPlayerRemoving(player: Player): void {
-		const playerComponent = this.getPlayerComponent(player);
-		if (playerComponent) {
-			this.destroyPlayerComponent(playerComponent);
-		}
+		this.destroyPlayerComponent(player);
 		this.kickOffenses.delete(player.UserId);
 	}
 }

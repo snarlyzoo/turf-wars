@@ -19,10 +19,10 @@ import {
 	setCombatEnabled,
 	setPhase,
 } from "shared/state/RoundState";
-import { CharacterType } from "shared/types/characterTypes";
-import { ChampionStage, GameMap, TeamSpawn } from "shared/types/workspaceTypes";
+import { GameMap, TeamSpawn } from "shared/types/workspaceTypes";
 import { fisherYatesShuffle } from "shared/utility";
 import { TurfService } from ".";
+import { GamePlayerComponent, LobbyPlayerComponent } from "server/components/players";
 
 type Phase = {
 	Type: PhaseType;
@@ -47,14 +47,15 @@ export class RoundManager implements OnStart {
 	private readonly PHASE_SEQUENCE: Phase[] = [
 		{ Type: PhaseType.Build, Duration: 40, blockCount: 32 },
 		{ Type: PhaseType.Combat, Duration: 90, projectileCount: 16 },
-		{ Type: PhaseType.Build, Duration: 20, blockCount: 16 },
+		{ Type: PhaseType.Build, Duration: 20, blockCount: 32 },
 		{ Type: PhaseType.Combat, Duration: 90, turfPerKill: 3, projectileCount: 8 },
 	];
 
-	private readonly SPECTATOR_TEAM: Team = Teams.FindFirstChild("Spectators") as Team;
-
-	private readonly GAME_MAP_PREFAB: GameMap;
 	private readonly MAP_LOAD_TIMEOUT: number = 10;
+
+	public readonly Spectators: Team;
+
+	private readonly GameMapPrefab: GameMap;
 
 	private phaseIndex: number = 0;
 	private cancelTimer?: () => boolean;
@@ -66,26 +67,64 @@ export class RoundManager implements OnStart {
 		private playerStatsManager: PlayerStatsManager,
 		private turfService: TurfService,
 	) {
-		const map = ServerStorage.FindFirstChild("GameMap");
-		if (!map || !isGameMap(map)) error("No valid map found in server storage");
-		this.GAME_MAP_PREFAB = map;
-
 		if (RunService.IsStudio()) {
 			this.MIN_PLAYER_COUNT = 1;
-			this.INTERMISSION_TIME = 10;
+			this.INTERMISSION_TIME = 2;
 			this.ROUND_START_COUNTDOWN = 2;
 			this.CHAMPION_DISPLAY_TIME = 2;
 			this.PHASE_SEQUENCE = [
 				{ Type: PhaseType.Build, Duration: 2, blockCount: 32 },
-				{ Type: PhaseType.Combat, Duration: 60, projectileCount: 16 },
+				//{ Type: PhaseType.Combat, Duration: 60, projectileCount: 16 },
 			];
 		}
+
+		const spectators = Teams.FindFirstChild("Spectators");
+		if (!spectators || !spectators.IsA("Team")) error("No spectators team found");
+		this.Spectators = spectators;
+
+		const gameMap = ServerStorage.FindFirstChild("GameMap");
+		if (!gameMap || !isGameMap(gameMap)) error("No valid map found in server storage");
+		this.GameMapPrefab = gameMap;
 	}
 
 	public onStart(): void {
 		Players.PlayerAdded.Connect(() => this.onPlayerAdded());
 		Players.PlayerRemoving.Connect((player) => this.onPlayerRemoving(player));
+
 		startWaitingForPlayersTimer();
+	}
+
+	public requestJoinTeam(player: Player, teamId: "Team1" | "Team2"): boolean {
+		if (gameStateAtom().type !== GameStateType.Round) return false;
+		if (player.Team !== this.Spectators) return false;
+
+		const roundState = getRoundState();
+		if (!roundState) return false;
+
+		const [joinTeam, otherTeam] =
+			teamId === "Team1" ? [roundState.team1, roundState.team2] : [roundState.team2, roundState.team1];
+		if (joinTeam.GetPlayers().size() > otherTeam.GetPlayers().size() + 1) return false;
+
+		this.players.add(player);
+		this.playerStatsManager.initializePlayer(player);
+		player.Team = joinTeam;
+
+		const gamePlayer = this.playerRegistry.setPlayerComponent(player, GamePlayerComponent);
+		const totals = this.PHASE_SEQUENCE.reduce(
+			(acc, phase, index) => {
+				if (index < this.phaseIndex) {
+					acc.blockCount += phase.blockCount ?? 0;
+					acc.projectileCount += phase.projectileCount ?? 0;
+				}
+				return acc;
+			},
+			{ blockCount: 0, projectileCount: 0 },
+		);
+		gamePlayer.giveResources(totals.blockCount, totals.projectileCount);
+
+		print(`${player.Name} joined ${joinTeam.Name}`);
+
+		return true;
 	}
 
 	private startIntermission(): void {
@@ -96,8 +135,6 @@ export class RoundManager implements OnStart {
 	}
 
 	private async startRound(): Promise<void> {
-		this.changeGameState(GameStateType.Round);
-
 		print("Loading game map...");
 
 		let gameMap;
@@ -115,14 +152,17 @@ export class RoundManager implements OnStart {
 		const [team1, team2] = [Teams.FindFirstChild("Blue Team") as Team, Teams.FindFirstChild("Red Team") as Team]; // TODO: Support more than 2 teams
 		initRoundState(team1, team2, gameMap);
 
+		this.changeGameState(GameStateType.Round);
+
 		this.turfService.reset();
 
 		Players.GetPlayers().forEach((player) => {
 			this.players.add(player);
 			this.playerStatsManager.initializePlayer(player);
 		});
+
 		this.shuffleTeams(team1, team2);
-		this.setPlayerComponents(CharacterType.Game);
+		this.players.forEach((player) => this.playerRegistry.setPlayerComponent(player, GamePlayerComponent));
 
 		setPhase(PhaseType.RoundStart, this.ROUND_START_COUNTDOWN);
 		await Promise.delay(this.ROUND_START_COUNTDOWN);
@@ -145,8 +185,7 @@ export class RoundManager implements OnStart {
 
 		setCombatEnabled(phase.Type === PhaseType.Combat, phase.turfPerKill);
 
-		if (phase.blockCount !== undefined) this.playerRegistry.giveBlocksToAll(phase.blockCount);
-		if (phase.projectileCount !== undefined) this.playerRegistry.giveProjectilesToAll(phase.projectileCount);
+		this.giveResourcesToAll(phase.blockCount, phase.projectileCount);
 
 		setPhase(phase.Type, phase.Duration);
 		this.phaseIndex = index;
@@ -159,36 +198,14 @@ export class RoundManager implements OnStart {
 	private async endRound(): Promise<void> {
 		this.changeGameState(GameStateType.PostRound);
 
-		const roundState = getRoundState();
-		if (roundState) {
-			const gameMap = roundState.gameMap as GameMap;
+		await this.displayChampions();
 
-			let winningTeam, championStage;
-			if (roundState.team1Turf >= BlockGrid.DIMENSIONS.X / 2) {
-				winningTeam = roundState.team1;
-				championStage = gameMap.Team1Spawn.ChampionStage;
-			} else {
-				winningTeam = roundState.team2;
-				championStage = gameMap.Team2Spawn.ChampionStage;
-			}
+		this.players.forEach((player) => (player.Team = this.Spectators));
 
-			print(`Round over, ${winningTeam.Name} wins!`);
-
-			await this.setPlayerComponents(CharacterType.None);
-
-			const championData = this.displayChampions(championStage);
-			Events.RoundEnded.broadcast(winningTeam, championData);
-			await Promise.delay(this.CHAMPION_DISPLAY_TIME);
-
-			gameMap.Destroy();
-
-			clearRoundState();
-		}
-
-		this.players.forEach((player) => (player.Team = this.SPECTATOR_TEAM));
-		this.setPlayerComponents(CharacterType.Lobby);
 		this.players.clear();
 		this.playerStatsManager.clearAllStats();
+
+		Players.GetPlayers().forEach((player) => this.playerRegistry.setPlayerComponent(player, LobbyPlayerComponent));
 
 		this.checkPlayerCount();
 	}
@@ -228,7 +245,7 @@ export class RoundManager implements OnStart {
 
 	private async loadGameMap(): Promise<GameMap> {
 		return new Promise((resolve, reject) => {
-			const map = this.GAME_MAP_PREFAB.Clone();
+			const map = this.GameMapPrefab.Clone();
 			map.Parent = Workspace;
 
 			print(map.Parent);
@@ -256,7 +273,23 @@ export class RoundManager implements OnStart {
 			});
 	}
 
-	private displayChampions(championStage: ChampionStage): Array<[string, string, string]> {
+	private async displayChampions(): Promise<void> {
+		const roundState = getRoundState();
+		if (!roundState) return;
+
+		const gameMap = roundState.gameMap as GameMap;
+
+		let winningTeam, championStage;
+		if (roundState.team1Turf >= BlockGrid.DIMENSIONS.X / 2) {
+			winningTeam = roundState.team1;
+			championStage = gameMap.Team1Spawn.ChampionStage;
+		} else {
+			winningTeam = roundState.team2;
+			championStage = gameMap.Team2Spawn.ChampionStage;
+		}
+
+		print(`Round over, ${winningTeam.Name} wins!`);
+
 		const positions = [
 			championStage.Positions.First,
 			championStage.Positions.Second,
@@ -264,38 +297,59 @@ export class RoundManager implements OnStart {
 			championStage.Positions.Fourth,
 			championStage.Positions.Fifth,
 		];
-
-		const champions = this.playerStatsManager.getChampions();
 		const championData: Array<[string, string, string]> = [];
-		Object.entries(champions).forEach(([award, [player, message]], i) => {
-			const character = player.Character;
-			if (!character) {
-				warn(`Player ${player.Name} does not have a character`);
-				return;
-			}
-
-			const rootPart = character.PrimaryPart;
-			const humanoid = character.FindFirstChildOfClass("Humanoid");
-			if (!rootPart || !humanoid) {
-				warn(`Character for ${player.Name} is missing parts`);
-				return;
-			}
-			const yOffset =
-				humanoid.RigType === Enum.HumanoidRigType.R15 ? humanoid.HipHeight + rootPart.Size.Y / 2 : 3;
-			character.PivotTo(positions[i].GetPivot().add(new Vector3(0, yOffset, 0)));
-			rootPart.Anchored = true;
-
+		const characters: Array<Model> = [];
+		Object.entries(this.playerStatsManager.getChampions()).forEach(([award, [player, message]], i) => {
 			print(`${player.Name} wins the ${award} award: ${message}`);
 
 			championData.push([player.Name, award, message]);
+
+			const character = Players.CreateHumanoidModelFromUserId(player.UserId);
+			character.Parent = Workspace;
+			characters.push(character);
+
+			const rootPart = character.FindFirstChild("HumanoidRootPart");
+			if (!rootPart || !rootPart.IsA("BasePart")) return;
+			character.PrimaryPart = rootPart;
+
+			const humanoid = character.FindFirstChildOfClass("Humanoid");
+			if (!humanoid) return;
+
+			let yOffset = 3;
+			if (humanoid.RigType === Enum.HumanoidRigType.R15) {
+				yOffset = humanoid.HipHeight + rootPart.Size.Y / 2;
+
+				const description = humanoid.GetAppliedDescription();
+				description.HeightScale = 1;
+				description.WidthScale = 1;
+				description.HeadScale = 1;
+				description.BodyTypeScale = 0;
+				description.ProportionScale = 0;
+				humanoid.ApplyDescription(description);
+			}
+
+			character.PivotTo(positions[i].GetPivot().add(new Vector3(0, yOffset, 0)));
+			rootPart.Anchored = true;
 		});
-		return championData;
+		Events.RoundEnded.broadcast(winningTeam, championData);
+
+		this.playerRegistry.deactivateAllPlayers();
+
+		await Promise.delay(this.CHAMPION_DISPLAY_TIME);
+
+		characters.forEach((character) => character.Destroy());
+
+		task.defer(() => gameMap.Destroy());
+		clearRoundState();
 	}
 
-	private async setPlayerComponents(characterType: CharacterType): Promise<void> {
-		await Promise.all(
-			[...this.players].map((player) => this.playerRegistry.setPlayerComponent(player, characterType)),
-		);
+	private giveResourcesToAll(blockCount?: number, projectileCount?: number): void {
+		if (blockCount === undefined && projectileCount === undefined) return;
+
+		this.players.forEach((player) => {
+			const gamePlayer = this.playerRegistry.getPlayerComponent(player, GamePlayerComponent);
+			if (gamePlayer) gamePlayer.giveResources(blockCount, projectileCount);
+		});
 	}
 
 	private shuffleTeams(team1: Team, team2: Team): void {

@@ -1,12 +1,14 @@
 import { BaseComponent, Component } from "@flamework/components";
 import { Flamework, OnStart } from "@flamework/core";
 import { Events } from "server/network";
-import { HumanoidCharacterInstance } from "shared/types/characterTypes";
+import { CharacterType, HumanoidCharacterInstance } from "shared/types/characterTypes";
 
 const isHumanoidCharacter = Flamework.createGuard<HumanoidCharacterInstance>();
 
 @Component()
 export abstract class PlayerComponent extends BaseComponent<{}, Player> implements OnStart {
+	public abstract readonly characterType: CharacterType;
+
 	public readonly team: Team;
 
 	public get isAlive(): boolean {
@@ -34,19 +36,19 @@ export abstract class PlayerComponent extends BaseComponent<{}, Player> implemen
 		this.instance.CharacterRemoving.Connect(() => this.onCharacterRemoving());
 	}
 
+	public updateTilt(angle?: number): void {
+		if (!this.isAlive) return;
+
+		const character = this.getCharacter();
+		if (character) Events.CharacterTiltChanged.except(this.instance, character, angle);
+	}
+
 	public getBackpack(): Backpack | undefined {
 		return this.backpack;
 	}
 
 	public getCharacter(): HumanoidCharacterInstance | undefined {
 		return this.character;
-	}
-
-	public updateTilt(angle?: number): void {
-		if (!this.isAlive) return;
-
-		const character = this.getCharacter();
-		if (character) Events.CharacterTiltChanged.except(this.instance, character, angle);
 	}
 
 	private fetchBackpack(): void {

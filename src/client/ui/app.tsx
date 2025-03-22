@@ -30,9 +30,7 @@ const App = (): React.Element => {
 	}, []);
 
 	useEffect(() => {
-		if (postRoundInfo && gameStateType !== GameStateType.PostRound) {
-			setPostRoundInfo(undefined);
-		}
+		if (postRoundInfo && gameStateType !== GameStateType.PostRound) setPostRoundInfo(undefined);
 	}, [gameStateType]);
 
 	switch (gameStateType) {

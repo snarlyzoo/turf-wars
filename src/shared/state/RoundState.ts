@@ -56,7 +56,7 @@ export function getRoundState(): RoundState | undefined {
 
 export function initRoundState(team1: Team, team2: Team, gameMap: GameMap): void {
 	roundStateAtom({
-		phase: PhaseType.Build,
+		phase: PhaseType.RoundStart,
 		time: 0,
 		team1,
 		team2,

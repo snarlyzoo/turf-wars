@@ -46,13 +46,9 @@ class RemoteHandler implements OnStart {
 		componentClass: AbstractConstructor<T>,
 		callback: (playerComponent: T) => U,
 	): U | undefined {
-		const playerComponent = this.playerRegistry.getPlayerComponent(player);
+		const playerComponent = this.playerRegistry.getPlayerComponent(player, componentClass);
 		if (!playerComponent) {
-			warn(`${player.Name} fired ${remoteName} without a player component`);
-			return;
-		}
-		if (!(playerComponent instanceof componentClass)) {
-			warn(`${player.Name} fired ${remoteName} without the correct player component`);
+			warn(`${player.Name} fired ${remoteName} without a ${componentClass}`);
 			return;
 		}
 		return callback(playerComponent);

@@ -54,7 +54,7 @@ export class BlockActionService {
 		}
 
 		if (component.takeDamage(config.damage)) {
-			gamePlayer.giveBlocks(1);
+			gamePlayer.giveResources(1);
 			this.playerStatsManager.incrementStat(gamePlayer.instance, "blocksDestroyed");
 		}
 		gamePlayer.lastDamageBlockTick = tick;
