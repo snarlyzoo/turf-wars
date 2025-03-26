@@ -8,7 +8,7 @@ import { DisposableComponent } from "shared/components";
 import { ResourceType, ToolAnimations, ToolInstance, ToolType } from "shared/types/toolTypes";
 
 @Component()
-export abstract class ToolComponent extends DisposableComponent<{}, ToolInstance> implements OnStart {
+abstract class ToolComponent extends DisposableComponent<{}, ToolInstance> implements OnStart {
 	public abstract readonly toolType: ToolType;
 	public abstract readonly resourceType: ResourceType;
 
@@ -119,3 +119,5 @@ export abstract class ToolComponent extends DisposableComponent<{}, ToolInstance
 		this.AnimationsLoaded.Fire();
 	}
 }
+
+export default ToolComponent;

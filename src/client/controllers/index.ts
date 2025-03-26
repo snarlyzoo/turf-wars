@@ -1,1 +1,1 @@
-export { CharacterController } from "./CharacterController";
+export { default as CharacterController } from "./CharacterController";

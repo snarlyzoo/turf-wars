@@ -37,7 +37,7 @@ type Phase = {
 const isGameMap = Flamework.createGuard<GameMap>();
 
 @Service()
-export class RoundManager implements OnStart {
+class RoundManager implements OnStart {
 	private readonly MIN_PLAYER_COUNT: number = 2;
 
 	private readonly INTERMISSION_TIME: number = 30;
@@ -408,3 +408,5 @@ export class RoundManager implements OnStart {
 		}
 	}
 }
+
+export default RoundManager;

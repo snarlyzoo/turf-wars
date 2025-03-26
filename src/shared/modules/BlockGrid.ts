@@ -1,7 +1,7 @@
 import { RunService, Workspace } from "@rbxts/services";
 import { getRoundState } from "shared/state/RoundState";
 
-export abstract class BlockGrid {
+abstract class BlockGrid {
 	public static readonly BLOCK_SIZE = 3;
 	public static readonly DIMENSIONS = new Vector3(80, 30, 60);
 
@@ -91,3 +91,5 @@ export abstract class BlockGrid {
 		return BlockGrid.MIN_BOUNDS.X + (roundState.team1Turf + 0.5) * BlockGrid.BLOCK_SIZE;
 	}
 }
+
+export default BlockGrid;

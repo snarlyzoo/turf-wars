@@ -1,3 +1,3 @@
-export { ProjectileCaster } from "./ProjectileCaster/ProjectileCaster";
-export { BlockGrid } from "./BlockGrid";
-export { Physics } from "./Physics";
+export { default as ProjectileCaster } from "./ProjectileCaster";
+export { default as BlockGrid } from "./BlockGrid";
+export { default as Physics } from "./Physics";

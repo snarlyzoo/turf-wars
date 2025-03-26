@@ -7,10 +7,7 @@ import { DisposableComponent } from "shared/components";
 import { HumanoidCharacterInstance, R6CharacterInstance, ViewmodelInstance } from "shared/types/characterTypes";
 
 @Component()
-export class ViewmodelComponent
-	extends DisposableComponent<{}, HumanoidCharacterInstance>
-	implements OnStart, OnRender
-{
+class ViewmodelComponent extends DisposableComponent<{}, HumanoidCharacterInstance> implements OnStart, OnRender {
 	private readonly USER_ID: number = RunService.IsStudio() ? 107484074 : Players.LocalPlayer.UserId;
 
 	private readonly CAMERA_Y_OFFSET: number = -1.5;
@@ -157,3 +154,5 @@ export class ViewmodelComponent
 		}
 	}
 }
+
+export default ViewmodelComponent;

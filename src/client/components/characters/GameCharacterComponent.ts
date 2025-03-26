@@ -8,10 +8,10 @@ import { Events } from "client/network";
 import { R15GameCharacterInstance, R6GameCharacterInstance } from "shared/types/characterTypes";
 import { ToolType } from "shared/types/toolTypes";
 import { findFirstChildWithTag } from "shared/utility";
-import { CharacterComponent } from "./CharacterComponent";
+import CharacterComponent from "./CharacterComponent";
 
 @Component()
-export class GameCharacterComponent extends CharacterComponent implements OnRender {
+class GameCharacterComponent extends CharacterComponent implements OnRender {
 	protected override CAMERA_MODE = Enum.CameraMode.LockFirstPerson;
 
 	public get tools(): Array<ToolComponent> {
@@ -182,3 +182,5 @@ export class GameCharacterComponent extends CharacterComponent implements OnRend
 		}
 	}
 }
+
+export default GameCharacterComponent;

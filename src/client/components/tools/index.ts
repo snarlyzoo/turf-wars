@@ -1,3 +1,3 @@
-export { ToolComponent } from "./ToolComponent";
-export { HammerComponent } from "./HammerComponent";
-export { SlingshotComponent } from "./SlingshotComponent";
+export { default as ToolComponent } from "./ToolComponent";
+export { default as HammerComponent } from "./HammerComponent";
+export { default as SlingshotComponent } from "./SlingshotComponent";

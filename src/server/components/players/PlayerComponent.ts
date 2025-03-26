@@ -6,7 +6,7 @@ import { CharacterType, HumanoidCharacterInstance } from "shared/types/character
 const isHumanoidCharacter = Flamework.createGuard<HumanoidCharacterInstance>();
 
 @Component()
-export abstract class PlayerComponent extends BaseComponent<{}, Player> implements OnStart {
+abstract class PlayerComponent extends BaseComponent<{}, Player> implements OnStart {
 	public abstract readonly characterType: CharacterType;
 
 	public readonly team: Team;
@@ -85,3 +85,5 @@ export abstract class PlayerComponent extends BaseComponent<{}, Player> implemen
 		this.isAlive = false;
 	}
 }
+
+export default PlayerComponent;

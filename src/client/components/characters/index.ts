@@ -1,3 +1,3 @@
-export { CharacterComponent } from "./CharacterComponent";
-export { GameCharacterComponent } from "./GameCharacterComponent";
-export { LobbyCharacterComponent } from "./LobbyCharacterComponent";
+export { default as CharacterComponent } from "./CharacterComponent";
+export { default as GameCharacterComponent } from "./GameCharacterComponent";
+export { default as LobbyCharacterComponent } from "./LobbyCharacterComponent";

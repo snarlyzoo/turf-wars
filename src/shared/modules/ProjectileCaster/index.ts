@@ -1,8 +1,8 @@
 import { ReplicatedFirst, Workspace } from "@rbxts/services";
-import { PriorityQueue } from "shared/classes/queues";
+import { PriorityQueue } from "shared/classes";
 import { ProjectileModifier } from "shared/types/projectileTypes";
 
-export abstract class ProjectileCaster {
+abstract class ProjectileCaster {
 	private static readonly THREAD_COUNT: number = 8;
 
 	private static actorFolder: Folder;
@@ -86,3 +86,5 @@ export abstract class ProjectileCaster {
 		}
 	}
 }
+
+export default ProjectileCaster;

@@ -1,3 +1,3 @@
-export { findFirstChildWithTag } from "./findFirstChildWithTag";
-export { fisherYatesShuffle } from "./fisherYatesShuffle";
+export { default as findFirstChildWithTag } from "./findFirstChildWithTag";
+export { default as fisherYatesShuffle } from "./fisherYatesShuffle";
 export { getHammerConfig, getSlingshotConfig } from "./getConfig";

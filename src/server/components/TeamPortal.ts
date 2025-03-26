@@ -19,7 +19,7 @@ interface TeamPortalInstance extends BasePart {
 @Component({
 	tag: "TeamPortal",
 })
-export class TeamPortal extends BaseComponent<Attributes, TeamPortalInstance> implements OnStart {
+class TeamPortal extends BaseComponent<Attributes, TeamPortalInstance> implements OnStart {
 	private team: Team | undefined;
 
 	private messageId: number = 0;

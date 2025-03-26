@@ -9,7 +9,7 @@ interface Attributes {
 @Component({
 	tag: "Block",
 })
-export class BlockComponent extends BaseComponent<Attributes, BasePart> implements OnStart {
+class BlockComponent extends BaseComponent<Attributes, BasePart> implements OnStart {
 	private readonly MAX_HEALTH: number = 100;
 
 	public onStart(): void {
@@ -29,3 +29,5 @@ export class BlockComponent extends BaseComponent<Attributes, BasePart> implemen
 		return false;
 	}
 }
+
+export default BlockComponent;

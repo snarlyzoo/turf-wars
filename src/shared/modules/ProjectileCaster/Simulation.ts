@@ -1,11 +1,11 @@
 //!native
 import Object from "@rbxts/object-utils";
 import { RunService, Workspace } from "@rbxts/services";
-import { Queue } from "shared/classes/queues";
+import { Queue } from "shared/classes";
 import { Physics } from "shared/modules";
 import { Projectile, ProjectileModifier } from "shared/types/projectileTypes";
 
-export class Simulation {
+class Simulation {
 	private readonly MAX_SIMULATION_TIME_FACTOR: number = 0.5;
 
 	private readonly DEFAULT_PROJECTILE_MODIFIER = {
@@ -167,3 +167,5 @@ export class Simulation {
 		if (parts.size() > 0) Workspace.BulkMoveTo(parts, cframes);
 	}
 }
+
+export default Simulation;

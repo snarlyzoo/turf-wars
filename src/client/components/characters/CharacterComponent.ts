@@ -8,7 +8,7 @@ import { TILT_UPDATE_SEND_RATE } from "shared/network";
 import { HumanoidCharacterInstance } from "shared/types/characterTypes";
 
 @Component()
-export abstract class CharacterComponent
+abstract class CharacterComponent
 	extends DisposableComponent<{}, HumanoidCharacterInstance>
 	implements OnStart, OnTick
 {
@@ -95,3 +95,5 @@ export abstract class CharacterComponent
 		this.janitor.Cleanup();
 	}
 }
+
+export default CharacterComponent;

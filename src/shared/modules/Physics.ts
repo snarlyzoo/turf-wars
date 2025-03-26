@@ -1,4 +1,4 @@
-export abstract class Physics {
+abstract class Physics {
 	public static calculatePosition(
 		position: Vector3,
 		velocity: Vector3,
@@ -12,3 +12,5 @@ export abstract class Physics {
 		return velocity.add(acceleration.mul(deltaTime));
 	}
 }
+
+export default Physics;

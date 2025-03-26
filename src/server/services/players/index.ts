@@ -1,2 +1,2 @@
-export { PlayerRegistry } from "./PlayerRegistry";
-export { PlayerStatsManager } from "./PlayerStatsManager";
+export { default as PlayerRegistry } from "./PlayerRegistry";
+export { default as PlayerStatsManager } from "./PlayerStatsManager";

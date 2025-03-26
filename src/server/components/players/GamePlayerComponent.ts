@@ -7,8 +7,8 @@ import { HammerConfig, SlingshotConfig, ToolInstance, ToolType } from "shared/ty
 import { ProjectileRecord } from "shared/types/projectileTypes";
 import { CharacterType, R15CharacterInstance, R6CharacterInstance } from "shared/types/characterTypes";
 import { findFirstChildWithTag, getHammerConfig, getSlingshotConfig } from "shared/utility";
-import { PlayerComponent } from "./PlayerComponent";
 import { BlockGrid } from "shared/modules";
+import PlayerComponent from "./PlayerComponent";
 
 type ToolConfigMap = {
 	[ToolType.Slingshot]: SlingshotConfig;
@@ -16,7 +16,7 @@ type ToolConfigMap = {
 };
 
 @Component()
-export class GamePlayerComponent extends PlayerComponent implements OnTick {
+class GamePlayerComponent extends PlayerComponent implements OnTick {
 	public override characterType = CharacterType.Game;
 
 	private readonly TURF_KICK_COOLDOWN = 0.5;
@@ -208,3 +208,5 @@ export class GamePlayerComponent extends PlayerComponent implements OnTick {
 		this.toolConfigs = {};
 	}
 }
+
+export default GamePlayerComponent;

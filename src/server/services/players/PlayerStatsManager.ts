@@ -28,7 +28,7 @@ type Award = {
 };
 
 @Service()
-export class PlayerStatsManager implements OnStart {
+class PlayerStatsManager implements OnStart {
 	private readonly AWARDS: Record<string, Award> = {
 		["Demolitionist"]: {
 			type: "good",
@@ -187,3 +187,5 @@ export class PlayerStatsManager implements OnStart {
 		this.leaderstats.set(player, leaderstats as Leaderstats);
 	}
 }
+
+export default PlayerStatsManager;

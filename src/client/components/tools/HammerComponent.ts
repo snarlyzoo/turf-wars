@@ -7,11 +7,11 @@ import { BlockComponent } from "shared/components";
 import { BlockGrid } from "shared/modules";
 import { HammerConfig, ResourceType, TargetIndicator, ToolType } from "shared/types/toolTypes";
 import { getHammerConfig } from "shared/utility";
-import { ToolComponent } from "./ToolComponent";
 import { roundStateAtom } from "shared/state/RoundState";
+import ToolComponent from "./ToolComponent";
 
 @Component()
-export class HammerComponent extends ToolComponent implements OnRender {
+class HammerComponent extends ToolComponent implements OnRender {
 	private readonly BLOCK_OVERLAP_SIZE: Vector3 = new Vector3(1, 1, 1).mul(BlockGrid.BLOCK_SIZE * 0.9);
 
 	public override toolType = ToolType.Hammer;
@@ -136,3 +136,5 @@ export class HammerComponent extends ToolComponent implements OnRender {
 		});
 	}
 }
+
+export default HammerComponent;

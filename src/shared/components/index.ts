@@ -1,2 +1,2 @@
-export { BlockComponent } from "./BlockComponent";
-export { DisposableComponent } from "./DisposableComponent";
+export { default as BlockComponent } from "./BlockComponent";
+export { default as DisposableComponent } from "./DisposableComponent";

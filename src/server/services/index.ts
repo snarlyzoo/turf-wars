@@ -1,2 +1,2 @@
-export { RoundManager } from "./RoundManager";
-export { TurfService } from "./TurfService";
+export { default as RoundManager } from "./RoundManager";
+export { default as TurfService } from "./TurfService";

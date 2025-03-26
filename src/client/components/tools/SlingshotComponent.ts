@@ -7,10 +7,10 @@ import { roundStateAtom } from "shared/state/RoundState";
 import { Projectile, ProjectileHitType, ProjectileModifier } from "shared/types/projectileTypes";
 import { ResourceType, SlingshotConfig, ToolType } from "shared/types/toolTypes";
 import { getSlingshotConfig } from "shared/utility";
-import { ToolComponent } from "./ToolComponent";
+import ToolComponent from "./ToolComponent";
 
 @Component()
-export class SlingshotComponent extends ToolComponent {
+class SlingshotComponent extends ToolComponent {
 	private readonly PROJECTILE_REFILL_TIME: number = 5;
 
 	public override toolType = ToolType.Slingshot;
@@ -137,3 +137,5 @@ export class SlingshotComponent extends ToolComponent {
 		Events.RegisterProjectileHit.fire(projectileHitType, hitPart, Workspace.GetServerTimeNow(), firedTimestamp);
 	}
 }
+
+export default SlingshotComponent;

@@ -12,7 +12,7 @@ import { ProjectileHitType, ProjectileRecord } from "shared/types/projectileType
 import { ToolType } from "shared/types/toolTypes";
 
 @Service()
-export class ProjectileActionService {
+class ProjectileActionService {
 	private readonly PROJECTILE_REFILL_TIME: number = 5;
 
 	private readonly Blocks = Workspace.FindFirstChild("Blocks") as Folder;
@@ -213,3 +213,5 @@ export class ProjectileActionService {
 		return true;
 	}
 }
+
+export default ProjectileActionService;

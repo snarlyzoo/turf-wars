@@ -1,2 +1,2 @@
-export { TiltCharacterComponent } from "./TiltCharacterComponent";
-export { ViewmodelComponent } from "./ViewmodelComponent";
+export { default as TiltCharacterComponent } from "./TiltCharacterComponent";
+export { default as ViewmodelComponent } from "./ViewmodelComponent";

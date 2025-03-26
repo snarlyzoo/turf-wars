@@ -5,7 +5,7 @@ import { TILT_UPDATE_SEND_RATE } from "shared/network";
 import { HumanoidCharacterInstance, R6CharacterInstance, R15CharacterInstance } from "shared/types/characterTypes";
 
 @Component()
-export class TiltCharacterComponent extends BaseComponent<{}, HumanoidCharacterInstance> implements OnStart {
+class TiltCharacterComponent extends BaseComponent<{}, HumanoidCharacterInstance> implements OnStart {
 	private readonly MAX_RENDER_DISTANCE: number = 100;
 
 	private readonly TWEEN_INFO: TweenInfo = new TweenInfo(
@@ -121,3 +121,5 @@ export class TiltCharacterComponent extends BaseComponent<{}, HumanoidCharacterI
 		return [leftShoulderC0, rightShoulderC0, toolJointC0];
 	}
 }
+
+export default TiltCharacterComponent;

@@ -7,7 +7,7 @@ import { Events } from "server/network";
 import { CharacterType } from "shared/types/characterTypes";
 
 @Service()
-export class PlayerRegistry implements OnStart {
+class PlayerRegistry implements OnStart {
 	private readonly MAX_KICK_OFFENSES: number = 3;
 
 	private playerComponents: Map<number, PlayerComponent> = new Map();
@@ -99,3 +99,5 @@ export class PlayerRegistry implements OnStart {
 		this.kickOffenses.delete(player.UserId);
 	}
 }
+
+export default PlayerRegistry;

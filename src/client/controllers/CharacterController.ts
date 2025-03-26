@@ -31,7 +31,7 @@ interface InputAction {
 }
 
 @Controller()
-export class CharacterController implements OnStart {
+class CharacterController implements OnStart {
 	private BASE_INPUT_ACTIONS: InputAction[] = [
 		{
 			actionName: BaseAction.Sneak,
@@ -313,3 +313,5 @@ export class CharacterController implements OnStart {
 		}
 	}
 }
+
+export default CharacterController;

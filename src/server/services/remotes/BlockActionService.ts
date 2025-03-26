@@ -13,7 +13,7 @@ import { HammerConfig, ToolType } from "shared/types/toolTypes";
 type HammerContext = [HumanoidCharacterInstance, HammerConfig];
 
 @Service()
-export class BlockActionService {
+class BlockActionService {
 	private readonly BLOCK_OVERLAP_SIZE: Vector3 = new Vector3(1, 1, 1).mul(BlockGrid.BLOCK_SIZE * 0.9);
 
 	public constructor(
@@ -132,3 +132,5 @@ export class BlockActionService {
 		return charPos.sub(position).Magnitude <= range + BlockGrid.BLOCK_SIZE / 2 + ORIGIN_ERROR_TOLERANCE;
 	}
 }
+
+export default BlockActionService;

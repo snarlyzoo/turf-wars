@@ -5,7 +5,7 @@ import { HumanoidCharacterInstance } from "shared/types/characterTypes";
 import { GameMap, TeamSpawn } from "shared/types/workspaceTypes";
 
 @Service()
-export class TurfService {
+class TurfService {
 	private readonly OUT_OF_BOUNDS_KICK = new Vector3(75, 25, 0);
 
 	private turfLines?: BasePart[];
@@ -133,3 +133,5 @@ export class TurfService {
 			.forEach((part) => (part.BrickColor = teamColor));
 	}
 }
+
+export default TurfService;
