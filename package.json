@@ -32,6 +32,7 @@
 		"@rbxts/charm-sync": "^0.3.0",
 		"@rbxts/flamework-react-utils": "^1.0.6",
 		"@rbxts/janitor": "^1.17.0-ts.1",
+		"@rbxts/lapis": "^0.3.8",
 		"@rbxts/object-utils": "^1.0.4",
 		"@rbxts/react": "^17.2.3",
 		"@rbxts/react-charm": "^0.3.0",

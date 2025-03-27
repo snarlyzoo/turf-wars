@@ -62,7 +62,7 @@ abstract class ProjectileCaster {
 	}
 
 	private static createActors(): void {
-		const controllerPrefab = script.Parent?.FindFirstChild("controller");
+		const controllerPrefab = script.FindFirstChild("controller");
 		if (!controllerPrefab || !controllerPrefab.IsA("LocalScript")) {
 			error("Controller prefab not found");
 		}

@@ -30,6 +30,11 @@ interface InputAction {
 	callback: (actionName: string, inputState: Enum.UserInputState) => void;
 }
 
+type ControlModule = {
+	Enable(): void;
+	Disable(): void;
+};
+
 @Controller()
 class CharacterController implements OnStart {
 	private BASE_INPUT_ACTIONS: InputAction[] = [
@@ -105,6 +110,8 @@ class CharacterController implements OnStart {
 	public readonly CharacterAdded: Signal<(characterComponent: CharacterComponent) => void> = new Signal();
 	public readonly CharacterRemoved: Signal<() => void> = new Signal();
 
+	private controlModule!: ControlModule;
+
 	private curInputActions: InputAction[] = [];
 
 	private lastCharacterEventTick: number = 0;
@@ -139,6 +146,8 @@ class CharacterController implements OnStart {
 	public constructor(private components: Components) {}
 
 	public onStart(): void {
+		this.getControlModule().then((controlModule) => (this.controlModule = controlModule));
+
 		this.player.GetPropertyChangedSignal("Team").Connect(() => this.onTeamChanged());
 
 		this.player.CharacterAdded.Connect((character) => this.onCharacterAdded(character));
@@ -165,6 +174,13 @@ class CharacterController implements OnStart {
 
 	public getCharacterComponent<T extends CharacterComponent>(componentClass: AbstractConstructor<T>): T | undefined {
 		return this.characterComponent instanceof componentClass ? this.characterComponent : undefined;
+	}
+
+	private async getControlModule(): Promise<ControlModule> {
+		return require(this.player
+			.WaitForChild("PlayerScripts")
+			.WaitForChild("PlayerModule")
+			.WaitForChild("ControlModule") as ModuleScript) as ControlModule;
 	}
 
 	private fetchPlayerObjects(): void {
@@ -254,9 +270,14 @@ class CharacterController implements OnStart {
 	}
 
 	private onSetCharacterType(characterType: CharacterType): void {
-		if (characterType === CharacterType.None && this.characterComponent)
-			this.onCharacterRemoving(this.characterComponent.instance);
 		this.characterType = characterType;
+
+		if (characterType === CharacterType.None) {
+			this.controlModule.Disable();
+			if (this.characterComponent) this.onCharacterRemoving(this.characterComponent.instance);
+		} else {
+			this.controlModule.Enable();
+		}
 	}
 
 	private onSneak(inputState: Enum.UserInputState): void {
