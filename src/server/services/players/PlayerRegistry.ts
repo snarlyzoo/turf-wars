@@ -68,11 +68,9 @@ class PlayerRegistry implements OnStart {
 			Events.SetCharacterType.fire(player, CharacterType.None);
 
 			if (!player.Character) return;
-
 			player.Character.GetChildren()
 				.filter((child) => child.IsA("BasePart"))
 				.forEach((child) => (child.Anchored = true));
-
 			player.Character.PivotTo(new CFrame(0, -1000, 0));
 		});
 	}
