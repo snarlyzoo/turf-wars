@@ -46,9 +46,9 @@ class RoundManager implements OnStart {
 
 	private readonly PHASE_SEQUENCE: Phase[] = [
 		{ Type: PhaseType.Build, Duration: 40, blockCount: 32 },
-		{ Type: PhaseType.Combat, Duration: 90, projectileCount: 16 },
+		{ Type: PhaseType.Combat, Duration: 90, blockCount: 32, projectileCount: 16 },
 		{ Type: PhaseType.Build, Duration: 20, blockCount: 32 },
-		{ Type: PhaseType.Combat, Duration: 90, turfPerKill: 3, projectileCount: 8 },
+		{ Type: PhaseType.Combat, Duration: 90, turfPerKill: 3, blockCount: 32, projectileCount: 8 },
 	];
 
 	private readonly MAP_LOAD_TIMEOUT: number = 10;

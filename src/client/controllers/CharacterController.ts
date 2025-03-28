@@ -264,9 +264,6 @@ class CharacterController implements OnStart {
 
 		this.characterComponent = undefined;
 		this.CharacterRemoved.Fire();
-
-		this.blockCount = 0;
-		this.projectileCount = 0;
 	}
 
 	private onSetCharacterType(characterType: CharacterType): void {
@@ -278,6 +275,9 @@ class CharacterController implements OnStart {
 		} else {
 			this.controlModule.Enable();
 		}
+
+		this.blockCount = 0;
+		this.projectileCount = 0;
 	}
 
 	private onSneak(inputState: Enum.UserInputState): void {
