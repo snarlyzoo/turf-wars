@@ -11,7 +11,7 @@ const DEFAULT_SLINGSHOT_CONFIG: SlingshotConfig = {
 	drawSpeed: 35,
 
 	projectile: {
-		startSpeed: 25,
+		startSpeed: 50,
 		maxSpeed: 100,
 
 		gravity: 40,

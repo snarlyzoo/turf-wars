@@ -1,6 +1,6 @@
 import { Component } from "@flamework/components";
 import { OnRender } from "@flamework/core";
-import { RunService, TextChatService, UserInputService } from "@rbxts/services";
+import { RunService, StarterPlayer, TextChatService, UserInputService } from "@rbxts/services";
 import Signal from "@rbxts/signal";
 import { ViewmodelComponent } from "client/components/characters/addons";
 import { HammerComponent, SlingshotComponent, ToolComponent } from "client/components/tools";
@@ -14,12 +14,7 @@ import CharacterComponent from "./CharacterComponent";
 class GameCharacterComponent extends CharacterComponent implements OnRender {
 	protected override CAMERA_MODE = Enum.CameraMode.LockFirstPerson;
 
-	public get tools(): Array<ToolComponent> {
-		return this._tools;
-	}
-	private _tools: Array<ToolComponent> = [];
-
-	public readonly ToolEquipped: Signal<(slot: number) => void> = new Signal();
+	private chatInputBarConfig?: ChatInputBarConfiguration;
 
 	public get viewmodel(): ViewmodelComponent {
 		return this._viewmodel;
@@ -28,12 +23,16 @@ class GameCharacterComponent extends CharacterComponent implements OnRender {
 		this._viewmodel = value;
 	}
 	private _viewmodel!: ViewmodelComponent;
-
-	private curTool!: ToolComponent | undefined;
-
-	private chatInputBarConfig?: ChatInputBarConfiguration;
-
 	private toolJoint!: Motor6D;
+
+	public get tools(): Array<ToolComponent> {
+		return this._tools;
+	}
+	private _tools: Array<ToolComponent> = [];
+	private curTool!: ToolComponent | undefined;
+	public readonly ToolEquipped: Signal<(slot: number) => void> = new Signal();
+
+	private speedMultiplier: number = 1;
 
 	public override onStart(): void {
 		super.onStart();
@@ -56,6 +55,8 @@ class GameCharacterComponent extends CharacterComponent implements OnRender {
 		UserInputService.MouseBehavior = this.chatInputBarConfig?.IsFocused
 			? Enum.MouseBehavior.Default
 			: Enum.MouseBehavior.LockCenter;
+
+		this.instance.Humanoid.WalkSpeed = StarterPlayer.CharacterWalkSpeed * this.speedMultiplier;
 	}
 
 	public onRender(): void {
@@ -120,6 +121,10 @@ class GameCharacterComponent extends CharacterComponent implements OnRender {
 		this.toolJoint.Part1 = undefined;
 
 		return true;
+	}
+
+	public setSpeedMultiplier(multiplier: number): void {
+		this.speedMultiplier = multiplier;
 	}
 
 	public getCurrentTool(): ToolComponent | undefined {

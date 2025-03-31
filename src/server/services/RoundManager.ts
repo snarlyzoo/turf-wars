@@ -74,7 +74,7 @@ class RoundManager implements OnStart {
 			this.CHAMPION_DISPLAY_TIME = 2;
 			this.PHASE_SEQUENCE = [
 				{ Type: PhaseType.Build, Duration: 2, blockCount: 32 },
-				//{ Type: PhaseType.Combat, Duration: 60, projectileCount: 16 },
+				{ Type: PhaseType.Combat, Duration: 60, projectileCount: 16 },
 			];
 		}
 

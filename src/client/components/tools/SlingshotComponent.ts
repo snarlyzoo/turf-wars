@@ -51,6 +51,8 @@ class SlingshotComponent extends ToolComponent {
 
 		this.isActive = true;
 
+		this.gameCharacter.setSpeedMultiplier(0.5);
+
 		let speed = this.config.projectile.startSpeed;
 		const tick = os.clock();
 		while (this.equipped && this.toFire) task.wait();
@@ -87,6 +89,8 @@ class SlingshotComponent extends ToolComponent {
 		}
 
 		this.isActive = false;
+
+		this.gameCharacter.setSpeedMultiplier(1);
 	}
 
 	private fetchTeamColor(): void {
